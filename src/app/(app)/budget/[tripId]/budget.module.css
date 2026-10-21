@@ -1,0 +1,225 @@
+.budgetRoot {
+  min-height: calc(100vh - 56px);
+  background: var(--gt-bg);
+  padding-bottom: var(--gt-space-16);
+}
+
+.topBar {
+  background: var(--gt-surface);
+  border-bottom: 1px solid var(--gt-border);
+  padding: var(--gt-space-3) var(--gt-space-6);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gt-space-4);
+  flex-wrap: wrap;
+}
+
+.topBarLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--gt-space-3);
+}
+
+.tripHeading {
+  font-size: var(--gt-text-lg);
+  font-weight: var(--gt-font-bold);
+  color: var(--gt-text-primary);
+}
+
+/* Stat Widgets Row */
+.statsRow {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--gt-space-4);
+  margin-bottom: var(--gt-space-6);
+}
+
+@media (min-width: 640px) {
+  .statsRow {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.statCard {
+  background: var(--gt-surface);
+  border: 1px solid var(--gt-border);
+  border-radius: var(--gt-radius-xl);
+  padding: var(--gt-space-5);
+  box-shadow: var(--gt-shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gt-space-1);
+}
+
+.statLabel {
+  font-size: var(--gt-text-xs);
+  color: var(--gt-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.statValue {
+  font-size: var(--gt-text-2xl);
+  font-weight: 800;
+  color: var(--gt-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.statSubtext {
+  font-size: 12px;
+  color: var(--gt-text-secondary);
+}
+
+/* Visual Breakdown Row */
+.chartsGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--gt-space-6);
+  margin-bottom: var(--gt-space-8);
+}
+
+@media (min-width: 1024px) {
+  .chartsGrid {
+    grid-template-columns: 1.1fr 1fr;
+  }
+}
+
+.chartCard {
+  background: var(--gt-surface);
+  border: 1px solid var(--gt-border);
+  border-radius: var(--gt-radius-2xl);
+  padding: var(--gt-space-6);
+  box-shadow: var(--gt-shadow-sm);
+}
+
+.cardTitle {
+  font-size: var(--gt-text-md);
+  font-weight: 700;
+  color: var(--gt-text-primary);
+  margin-bottom: var(--gt-space-4);
+}
+
+/* Category Bars */
+.catList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gt-space-3);
+}
+
+.catRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.catMeta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+
+.catBarTrack {
+  height: 6px;
+  background: var(--gt-bg-alt);
+  border-radius: var(--gt-radius-full);
+  overflow: hidden;
+}
+
+.catBarFill {
+  height: 100%;
+  border-radius: var(--gt-radius-full);
+}
+
+/* Daily Table */
+.tableCard {
+  background: var(--gt-surface);
+  border: 1px solid var(--gt-border);
+  border-radius: var(--gt-radius-2xl);
+  padding: var(--gt-space-6);
+  box-shadow: var(--gt-shadow-sm);
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  text-align: left;
+}
+
+.th {
+  padding: 10px 14px;
+  border-bottom: 2px solid var(--gt-border);
+  color: var(--gt-text-muted);
+  font-weight: 600;
+}
+
+.td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--gt-border);
+  color: var(--gt-text-primary);
+}
+
+.tdCost {
+  font-weight: 700;
+  color: var(--gt-text-primary);
+}
+
+.rowAlert {
+  background: rgba(239, 68, 68, 0.05);
+}
+
+/* Comparison Cards */
+.compareGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--gt-space-6);
+  margin-top: var(--gt-space-6);
+}
+
+@media (min-width: 900px) {
+  .compareGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.planCard {
+  background: var(--gt-surface);
+  border: 1px solid var(--gt-border);
+  border-radius: var(--gt-radius-2xl);
+  padding: var(--gt-space-6);
+  box-shadow: var(--gt-shadow-sm);
+  display: flex;
+  flex-direction: column;
+  transition: all var(--gt-transition-normal);
+  position: relative;
+}
+
+.planCard:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--gt-shadow-lg);
+}
+
+.planCardRecommended {
+  border-color: var(--gt-blue);
+  box-shadow: 0 8px 30px rgba(65, 105, 216, 0.15);
+  background: linear-gradient(180deg, #ffffff 0%, #f8faff 100%);
+}
+
+.ribbon {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--gt-blue);
+  color: #fff;
+  padding: 4px 14px;
+  border-radius: var(--gt-radius-full);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}

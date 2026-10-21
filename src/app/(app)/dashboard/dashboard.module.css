@@ -1,0 +1,471 @@
+.dashboard {
+  min-height: calc(100vh - 56px);
+  background-color: var(--gt-bg);
+  padding-bottom: var(--gt-space-12);
+}
+
+/* Hero Section */
+.hero {
+  position: relative;
+  height: 280px;
+  border-radius: var(--gt-radius-2xl);
+  overflow: hidden;
+  margin-bottom: var(--gt-space-8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--gt-shadow-md);
+}
+
+@media (max-width: 768px) {
+  .hero {
+    height: 220px;
+  }
+}
+
+.heroBg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.heroOverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(15, 23, 42, 0.4) 0%,
+    rgba(15, 23, 42, 0.75) 100%
+  );
+}
+
+.heroContent {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  width: 100%;
+  max-width: 640px;
+  padding: 0 var(--gt-space-4);
+}
+
+.heroGreeting {
+  font-size: var(--gt-text-sm);
+  color: #e2e8f0;
+  font-weight: var(--gt-font-medium);
+  margin-bottom: var(--gt-space-1);
+}
+
+.heroTitle {
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  font-weight: var(--gt-font-bold);
+  color: #ffffff;
+  letter-spacing: -0.02em;
+  margin-bottom: var(--gt-space-5);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.heroSearchRow {
+  display: flex;
+  align-items: center;
+  gap: var(--gt-space-3);
+  width: 100%;
+  max-width: 580px;
+  margin: 0 auto;
+}
+
+@media (max-width: 640px) {
+  .heroSearchRow {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--gt-space-2);
+  }
+
+  .heroTitle {
+    font-size: 1.5rem;
+    margin-bottom: var(--gt-space-3);
+  }
+
+  .hero {
+    height: auto;
+    min-height: 250px;
+    padding: var(--gt-space-6) var(--gt-space-2);
+  }
+}
+
+.searchPill {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--gt-space-3);
+  background: #ffffff;
+  border-radius: var(--gt-radius-full);
+  padding: var(--gt-space-3) var(--gt-space-4);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.searchPill input {
+  border: none;
+  background: transparent;
+  outline: none;
+  width: 100%;
+  font-size: var(--gt-text-sm);
+  color: var(--gt-text-primary);
+  font-family: inherit;
+}
+
+.searchPill input::placeholder {
+  color: var(--gt-text-muted);
+}
+
+/* Two Column Layout */
+.contentGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--gt-space-8);
+  margin-bottom: var(--gt-space-10);
+}
+
+@media (min-width: 1024px) {
+  .contentGrid {
+    grid-template-columns: 1.8fr 1fr;
+  }
+}
+
+/* Trips Grid */
+.tripsGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--gt-space-6);
+}
+
+@media (min-width: 640px) {
+  .tripsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1280px) {
+  .tripsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Trip Card */
+.tripCard {
+  background: var(--gt-surface);
+  border: 1px solid var(--gt-border);
+  border-radius: var(--gt-radius-xl);
+  overflow: hidden;
+  box-shadow: var(--gt-shadow-sm);
+  transition: all var(--gt-transition-normal);
+  display: flex;
+  flex-direction: column;
+}
+
+.tripCard:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--gt-shadow-lg);
+  border-color: var(--gt-border-hover);
+}
+
+.cardImageWrapper {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background-color: var(--gt-bg-alt);
+}
+
+.cardImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--gt-transition-slow);
+}
+
+.tripCard:hover .cardImage {
+  transform: scale(1.04);
+}
+
+.statusBadgeWrapper {
+  position: absolute;
+  top: var(--gt-space-3);
+  right: var(--gt-space-3);
+  z-index: 2;
+}
+
+.cardBody {
+  padding: var(--gt-space-5);
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.cardTitle {
+  font-size: var(--gt-text-lg);
+  font-weight: var(--gt-font-bold);
+  color: var(--gt-text-primary);
+  margin-bottom: var(--gt-space-1);
+}
+
+.cardMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--gt-space-3);
+  font-size: var(--gt-text-xs);
+  color: var(--gt-text-secondary);
+  margin-bottom: var(--gt-space-4);
+  flex-wrap: wrap;
+}
+
+.metaItem {
+  display: flex;
+  align-items: center;
+  gap: var(--gt-space-1);
+}
+
+.cardDivider {
+  height: 1px;
+  background: var(--gt-border);
+  margin: var(--gt-space-3) 0;
+}
+
+.cardStats {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--gt-text-xs);
+  color: var(--gt-text-muted);
+  margin-bottom: var(--gt-space-4);
+}
+
+.statHighlight {
+  font-weight: var(--gt-font-semibold);
+  color: var(--gt-text-primary);
+}
+
+/* Sidebar Widgets */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gt-space-5);
+}
+
+.widget {
+  background: var(--gt-surface);
+  border: 1px solid var(--gt-border);
+  border-radius: var(--gt-radius-xl);
+  padding: var(--gt-space-5);
+  box-shadow: var(--gt-shadow-sm);
+}
+
+.widgetHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--gt-space-2);
+  font-size: var(--gt-text-sm);
+  font-weight: var(--gt-font-semibold);
+  color: var(--gt-text-primary);
+  margin-bottom: var(--gt-space-4);
+}
+
+.countdownBox {
+  display: flex;
+  align-items: center;
+  gap: var(--gt-space-4);
+}
+
+.countdownDays {
+  background: linear-gradient(135deg, var(--gt-blue) 0%, #2563eb 100%);
+  color: #fff;
+  border-radius: var(--gt-radius-lg);
+  padding: var(--gt-space-3) var(--gt-space-4);
+  text-align: center;
+  min-width: 68px;
+}
+
+.countdownNumber {
+  font-size: var(--gt-text-2xl);
+  font-weight: var(--gt-font-bold);
+  line-height: 1;
+}
+
+.countdownLabel {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.9;
+}
+
+.countdownInfo {
+  flex: 1;
+}
+
+.countdownTripTitle {
+  font-weight: var(--gt-font-semibold);
+  font-size: var(--gt-text-sm);
+  color: var(--gt-text-primary);
+  margin-bottom: 2px;
+}
+
+.countdownDestination {
+  font-size: var(--gt-text-xs);
+  color: var(--gt-text-secondary);
+}
+
+/* Budget Progress Bar */
+.budgetWidgetAmount {
+  font-size: var(--gt-text-2xl);
+  font-weight: var(--gt-font-bold);
+  color: var(--gt-text-primary);
+  margin-bottom: var(--gt-space-1);
+}
+
+.budgetSubtitle {
+  font-size: var(--gt-text-xs);
+  color: var(--gt-text-muted);
+  margin-bottom: var(--gt-space-3);
+}
+
+.progressBarTrack {
+  height: 8px;
+  background: var(--gt-bg-alt);
+  border-radius: var(--gt-radius-full);
+  overflow: hidden;
+  margin-bottom: var(--gt-space-2);
+}
+
+.progressBarFill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--gt-blue) 0%, var(--gt-teal) 100%);
+  border-radius: var(--gt-radius-full);
+}
+
+.budgetLabels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--gt-text-muted);
+}
+
+/* Explore Destinations Horizontal Scroll */
+.exploreSection {
+  margin-top: var(--gt-space-6);
+}
+
+.filterChips {
+  display: flex;
+  gap: var(--gt-space-2);
+  margin-bottom: var(--gt-space-5);
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.filterChip {
+  padding: var(--gt-space-2) var(--gt-space-4);
+  border-radius: var(--gt-radius-full);
+  border: 1px solid var(--gt-border);
+  background: var(--gt-surface);
+  font-size: var(--gt-text-xs);
+  font-weight: var(--gt-font-medium);
+  color: var(--gt-text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--gt-transition-fast);
+}
+
+.filterChip:hover {
+  border-color: var(--gt-border-hover);
+  color: var(--gt-text-primary);
+}
+
+.filterChipActive {
+  background: var(--gt-blue);
+  color: #fff;
+  border-color: var(--gt-blue);
+}
+
+.destinationsRow {
+  display: flex;
+  gap: var(--gt-space-5);
+  overflow-x: auto;
+  padding-bottom: var(--gt-space-4);
+  scrollbar-width: thin;
+}
+
+.destCard {
+  flex: 0 0 240px;
+  height: 320px;
+  position: relative;
+  border-radius: var(--gt-radius-xl);
+  overflow: hidden;
+  box-shadow: var(--gt-shadow-md);
+  cursor: pointer;
+  transition: all var(--gt-transition-normal);
+}
+
+.destCard:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--gt-shadow-lg);
+}
+
+.destImg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--gt-transition-slow);
+}
+
+.destCard:hover .destImg {
+  transform: scale(1.06);
+}
+
+.destOverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0) 40%,
+    rgba(15, 23, 42, 0.85) 100%
+  );
+}
+
+.destContent {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: var(--gt-space-4);
+  color: #fff;
+  z-index: 2;
+}
+
+.destName {
+  font-size: var(--gt-text-lg);
+  font-weight: var(--gt-font-bold);
+  margin-bottom: 2px;
+}
+
+.destCountry {
+  font-size: var(--gt-text-xs);
+  color: #cbd5e1;
+  margin-bottom: var(--gt-space-2);
+}
+
+.destFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.destCostBadge {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+  padding: 3px 8px;
+  border-radius: var(--gt-radius-full);
+  font-size: 11px;
+  font-weight: var(--gt-font-medium);
+}
