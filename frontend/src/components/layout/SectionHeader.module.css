@@ -1,0 +1,28 @@
+.sectionHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: var(--gt-space-6);
+  flex-wrap: wrap;
+  gap: var(--gt-space-4);
+}
+
+.title {
+  font-size: var(--gt-text-2xl);
+  font-weight: var(--gt-font-bold);
+  color: var(--gt-text-primary);
+  letter-spacing: -0.02em;
+  margin-bottom: var(--gt-space-1);
+}
+
+.subtitle {
+  font-size: var(--gt-text-sm);
+  color: var(--gt-text-secondary);
+  line-height: 1.4;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--gt-space-3);
+}

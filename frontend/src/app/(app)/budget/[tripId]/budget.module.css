@@ -1,0 +1,525 @@
+.budgetRoot {
+  min-height: calc(100vh - 56px);
+  background: var(--gt-bg);
+  padding-bottom: var(--gt-space-16);
+}
+
+.topBar {
+  background: var(--gt-surface);
+  border-bottom: 1px solid var(--gt-border);
+  padding: var(--gt-space-3) var(--gt-space-6);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gt-space-4);
+  flex-wrap: wrap;
+}
+
+.topBarLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--gt-space-3);
+}
+
+.tripHeading {
+  font-size: var(--gt-text-lg);
+  font-weight: var(--gt-font-bold);
+  color: var(--gt-text-primary);
+}
+
+/* Stat Widgets Row */
+.statsRow {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--gt-space-4);
+  margin-bottom: var(--gt-space-6);
+}
+
+@media (min-width: 640px) {
+  .statsRow {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.statCard {
+  background: var(--gt-surface);
+  border: 1px solid var(--gt-border);
+  border-radius: var(--gt-radius-xl);
+  padding: var(--gt-space-5);
+  box-shadow: var(--gt-shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gt-space-1);
+}
+
+.statLabel {
+  font-size: var(--gt-text-xs);
+  color: var(--gt-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.statValue {
+  font-size: var(--gt-text-2xl);
+  font-weight: 800;
+  color: var(--gt-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.statSubtext {
+  font-size: 12px;
+  color: var(--gt-text-secondary);
+}
+
+/* Visual Breakdown Row */
+.chartsGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--gt-space-6);
+  margin-bottom: var(--gt-space-8);
+}
+
+@media (min-width: 1024px) {
+  .chartsGrid {
+    grid-template-columns: 1.1fr 1fr;
+  }
+}
+
+.chartCard {
+  background: var(--gt-surface);
+  border: 1px solid var(--gt-border);
+  border-radius: var(--gt-radius-2xl);
+  padding: var(--gt-space-6);
+  box-shadow: var(--gt-shadow-sm);
+}
+
+.cardTitle {
+  font-size: var(--gt-text-md);
+  font-weight: 700;
+  color: var(--gt-text-primary);
+  margin-bottom: var(--gt-space-4);
+}
+
+/* Category Bars */
+.catList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gt-space-3);
+}
+
+.catRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.catMeta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+
+.catBarTrack {
+  height: 6px;
+  background: var(--gt-bg-alt);
+  border-radius: var(--gt-radius-full);
+  overflow: hidden;
+}
+
+.catBarFill {
+  height: 100%;
+  border-radius: var(--gt-radius-full);
+}
+
+/* Daily Table */
+.tableCard {
+  background: var(--gt-surface);
+  border: 1px solid var(--gt-border);
+  border-radius: var(--gt-radius-2xl);
+  padding: var(--gt-space-6);
+  box-shadow: var(--gt-shadow-sm);
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  text-align: left;
+}
+
+.th {
+  padding: 10px 14px;
+  border-bottom: 2px solid var(--gt-border);
+  color: var(--gt-text-muted);
+  font-weight: 600;
+}
+
+.td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--gt-border);
+  color: var(--gt-text-primary);
+}
+
+.tdCost {
+  font-weight: 700;
+  color: var(--gt-text-primary);
+}
+
+.rowAlert {
+  background: rgba(239, 68, 68, 0.05);
+}
+
+/* Comparison Cards */
+.compareGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--gt-space-6);
+  margin-top: var(--gt-space-6);
+}
+
+@media (min-width: 900px) {
+  .compareGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.planCard {
+  background: var(--gt-surface);
+  border: 1px solid var(--gt-border);
+  border-radius: var(--gt-radius-2xl);
+  padding: var(--gt-space-6);
+  box-shadow: var(--gt-shadow-sm);
+  display: flex;
+  flex-direction: column;
+  transition: all var(--gt-transition-normal);
+  position: relative;
+}
+
+.planCard:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--gt-shadow-lg);
+}
+
+.planCardRecommended {
+  border-color: var(--gt-blue);
+  box-shadow: 0 8px 30px rgba(65, 105, 216, 0.15);
+  background: linear-gradient(180deg, #ffffff 0%, #f8faff 100%);
+}
+
+.ribbon {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--gt-blue);
+  color: #fff;
+  padding: 4px 14px;
+  border-radius: var(--gt-radius-full);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* ==========================================================================
+   9-CATEGORY BREAKDOWN & COST PROVENANCE
+   ========================================================================== */
+.provenanceBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
+.provenanceBenchmark {
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+}
+
+.provenancePublished {
+  background: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+}
+
+.provenanceAiEstimate {
+  background: #faf5ff;
+  color: #7c3aed;
+  border: 1px solid #e9d5ff;
+}
+
+.provenanceUserReceipt {
+  background: #fffbeb;
+  color: #d97706;
+  border: 1px solid #fde68a;
+}
+
+.categoryGroupCard {
+  background: var(--gt-surface);
+  border: 1px solid var(--gt-border);
+  border-radius: var(--gt-radius-xl);
+  padding: var(--gt-space-5);
+  margin-bottom: var(--gt-space-4);
+  box-shadow: var(--gt-shadow-sm);
+  transition: all 0.15s ease;
+}
+
+.categoryGroupCard:hover {
+  border-color: #cbd5e1;
+}
+
+.categoryGroupHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--gt-space-3);
+  padding-bottom: var(--gt-space-2);
+  border-bottom: 1px solid var(--gt-border-subtle, #f1f5f9);
+}
+
+.categoryGroupTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--gt-text-primary);
+}
+
+.categoryGroupAmount {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--gt-text-primary);
+}
+
+.itemList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.itemRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: #f8fafc;
+  border-radius: 6px;
+  font-size: 12.5px;
+  gap: 8px;
+}
+
+.itemLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.itemName {
+  font-weight: 500;
+  color: var(--gt-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.itemRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.itemCost {
+  font-weight: 700;
+  color: var(--gt-text-primary);
+}
+
+/* ==========================================================================
+   LIVE EXPENSE TRACKER & GROUP SPLITWISE
+   ========================================================================== */
+.splitwiseRoot {
+  margin-top: var(--gt-space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gt-space-6);
+}
+
+.splitwiseGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--gt-space-6);
+}
+
+@media (min-width: 900px) {
+  .splitwiseGrid {
+    grid-template-columns: 1fr 1.3fr;
+  }
+}
+
+.expenseFormCard {
+  background: #1a1a1f;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1.25rem;
+  padding: var(--gt-space-6);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.expenseInputGroup {
+  margin-bottom: var(--gt-space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.expenseInputLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.expenseInput {
+  width: 100%;
+  padding: 10px 14px;
+  background: #141418;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.75rem;
+  font-size: 13px;
+  color: #ffffff;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.expenseInput:focus {
+  border-color: #6366f1;
+}
+
+.collaboratorsPills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.collabPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  border-radius: 9999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #141418;
+  color: rgba(255, 255, 255, 0.7);
+  transition: all 0.15s ease;
+}
+
+.collabPillActive {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: #6366f1;
+  color: #a5b4fc;
+}
+
+/* Settlement "Who Owes Whom" */
+.settlementSection {
+  background: #1a1a1f;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1.25rem;
+  padding: var(--gt-space-6);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.settlementList {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--gt-space-3);
+  margin-top: var(--gt-space-4);
+}
+
+@media (min-width: 600px) {
+  .settlementList {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.settlementCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: #141418;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+  gap: 10px;
+  transition: all 0.2s ease;
+}
+
+.settlementPayer {
+  font-weight: 700;
+  color: #f87171;
+}
+
+.settlementPayee {
+  font-weight: 700;
+  color: #4ade80;
+}
+
+.settlementAmount {
+  font-size: 14.5px;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.settledCard {
+  opacity: 0.45;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* Compare Alternatives Extras */
+.altSavingsBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+  padding: 3px 10px;
+  border-radius: 9999px;
+  margin-bottom: 12px;
+}
+
+.altChangesList {
+  margin: 14px 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.altChangeItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.4;
+}
+

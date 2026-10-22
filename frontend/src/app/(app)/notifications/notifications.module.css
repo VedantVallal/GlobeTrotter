@@ -1,0 +1,159 @@
+.wrapper {
+  min-height: calc(100vh - 56px);
+  background-color: var(--gt-bg);
+  padding-bottom: var(--gt-space-16);
+}
+
+.tabsRow {
+  display: flex;
+  align-items: center;
+  gap: var(--gt-space-2);
+  margin-bottom: var(--gt-space-6);
+  border-bottom: 1px solid var(--gt-border);
+  padding-bottom: var(--gt-space-2);
+  flex-wrap: wrap;
+}
+
+.tabBtn {
+  padding: 8px 16px;
+  border-radius: var(--gt-radius-md);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--gt-text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--gt-transition-fast);
+}
+
+.tabBtn:hover {
+  background: var(--gt-surface);
+  color: var(--gt-text-primary);
+}
+
+.tabBtnActive {
+  background: var(--gt-blue-light);
+  color: var(--gt-blue);
+  border-color: rgba(65, 105, 216, 0.3);
+}
+
+.actionsBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--gt-space-4);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.countLabel {
+  font-size: 13px;
+  color: var(--gt-text-muted);
+}
+
+.notifCardList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gt-space-3);
+}
+
+.card {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--gt-space-4);
+  padding: var(--gt-space-4) var(--gt-space-5);
+  background: var(--gt-surface);
+  border: 1px solid var(--gt-border);
+  border-radius: var(--gt-radius-xl);
+  box-shadow: var(--gt-shadow-xs);
+  transition: all var(--gt-transition-fast);
+  text-decoration: none;
+  color: inherit;
+}
+
+.card:hover {
+  border-color: var(--gt-border-hover);
+  box-shadow: var(--gt-shadow-md);
+  transform: translateY(-1px);
+}
+
+.cardUnread {
+  border-left: 4px solid var(--gt-blue);
+  background: linear-gradient(90deg, var(--gt-blue-light) 0%, var(--gt-surface) 100%);
+}
+
+.iconCircle {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--gt-radius-lg);
+  background: var(--gt-bg-alt);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.iconCircleTrip {
+  background: rgba(56, 189, 248, 0.15);
+  color: #0284c7;
+}
+
+.iconCircleAi {
+  background: rgba(168, 85, 247, 0.15);
+  color: #9333ea;
+}
+
+.iconCircleBudget {
+  background: rgba(16, 185, 129, 0.15);
+  color: #059669;
+}
+
+.cardBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.cardTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--gt-text-primary);
+}
+
+.cardTime {
+  font-size: 11px;
+  color: var(--gt-text-muted);
+  white-space: nowrap;
+}
+
+.cardDesc {
+  font-size: 13px;
+  color: var(--gt-text-secondary);
+  line-height: 1.45;
+  margin-bottom: 8px;
+}
+
+.cardAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gt-blue);
+}
+
+.emptyState {
+  text-align: center;
+  padding: 60px 20px;
+  background: var(--gt-surface);
+  border: 1px dashed var(--gt-border);
+  border-radius: var(--gt-radius-2xl);
+  color: var(--gt-text-muted);
+}

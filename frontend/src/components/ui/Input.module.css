@@ -1,0 +1,67 @@
+.field { display: flex; flex-direction: column; gap: var(--gt-space-1); }
+
+.label {
+  font-size: var(--gt-text-sm);
+  font-weight: var(--gt-font-medium);
+  color: var(--gt-text-primary);
+  line-height: 1.4;
+}
+.required { color: var(--gt-error); margin-left: 2px; }
+
+.inputWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input {
+  width: 100%;
+  background: var(--gt-surface);
+  border: 1.5px solid var(--gt-border);
+  border-radius: var(--gt-radius-md);
+  color: var(--gt-text-primary);
+  transition: border-color var(--gt-duration-base) var(--gt-easing),
+              box-shadow var(--gt-duration-base) var(--gt-easing);
+  outline: none;
+}
+.input::placeholder { color: var(--gt-text-muted); }
+.input:hover { border-color: var(--gt-border-strong); }
+.input:focus { border-color: var(--gt-border-focus); box-shadow: var(--gt-shadow-focus); }
+.input:disabled { background: var(--gt-surface-2); cursor: not-allowed; opacity: 0.6; }
+
+.inputWrapError .input { border-color: var(--gt-error); }
+.inputWrapError .input:focus { box-shadow: 0 0 0 3px rgba(194,65,65,0.2); }
+
+/* Sizes */
+.input--sm { height: var(--gt-input-h-sm); padding: 0 var(--gt-space-3); font-size: var(--gt-text-sm); }
+.input--md { height: var(--gt-input-h-md); padding: 0 var(--gt-space-3); font-size: var(--gt-text-sm); }
+.input--lg { height: var(--gt-input-h-lg); padding: 0 var(--gt-space-4); font-size: var(--gt-text-base); }
+
+/* Icons */
+.hasLeft .input { padding-left: 40px; }
+.hasRight .input { padding-right: 40px; }
+
+.leftIcon {
+  position: absolute; left: var(--gt-space-3);
+  display: flex; align-items: center;
+  color: var(--gt-text-muted);
+  pointer-events: none;
+  z-index: 1;
+}
+.rightIcon {
+  position: absolute; right: var(--gt-space-3);
+  display: flex; align-items: center;
+  color: var(--gt-text-muted);
+  z-index: 1;
+}
+
+.error {
+  font-size: var(--gt-text-xs);
+  color: var(--gt-error);
+  line-height: 1.4;
+}
+.hint {
+  font-size: var(--gt-text-xs);
+  color: var(--gt-text-muted);
+  line-height: 1.4;
+}

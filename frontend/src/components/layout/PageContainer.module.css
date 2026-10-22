@@ -1,0 +1,17 @@
+.container {
+  max-width: var(--gt-container-xl);
+  margin: 0 auto;
+  padding: var(--gt-space-8) var(--gt-page-px-desktop);
+  width: 100%;
+}
+
+.noPadding {
+  padding: 0;
+  max-width: 100%;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: var(--gt-space-6) var(--gt-page-px-mobile);
+  }
+}

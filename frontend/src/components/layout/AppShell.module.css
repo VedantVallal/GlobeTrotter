@@ -1,0 +1,19 @@
+.shell {
+  display: flex;
+  min-height: 100vh;
+  background: var(--gt-bg);
+}
+
+.main {
+  flex: 1;
+  margin-left: var(--gt-nav-rail);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+@media (max-width: 767px) {
+  .main {
+    margin-left: 0;
+    padding-bottom: 64px; /* mobile nav height */
+  }
+}
