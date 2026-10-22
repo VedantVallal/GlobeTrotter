@@ -1,20 +1,24 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   MapPin,
   Calendar,
   Users,
-  DollarSign,
   Plus,
   X,
   Check,
   Sparkles,
   ArrowRight,
   Globe,
-  Camera,
+  Wand2,
+  Edit3,
+  Clock,
+  Compass,
+  CheckCircle2,
+  DollarSign,
 } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import PageContainer from '@/components/layout/PageContainer';
@@ -22,8 +26,9 @@ import SectionHeader from '@/components/layout/SectionHeader';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { mockCities } from '@/lib/data/mockCities';
-import { tripService } from '@/lib/services';
-import { formatCurrency, calculateDays } from '@/lib/utils/formatters';
+import { tripService, playgroundService, itineraryService } from '@/lib/services';
+import { generateSynchronizedTripPlan } from '@/lib/services/tripGenerator';
+import { calculateDays } from '@/lib/utils/formatters';
 import styles from './create-trip.module.css';
 
 const PREFERENCE_OPTIONS = [
@@ -32,52 +37,118 @@ const PREFERENCE_OPTIONS = [
   'History', 'Nightlife', 'Relaxation',
 ];
 
+const POPULAR_DEPARTURE_CITIES = [
+  'Mumbai', 'Delhi', 'Bengaluru', 'Pune', 'Kolkata', 'Hyderabad', 'Ahmedabad', 'Chennai',
+];
+
+const POPULAR_DESTINATIONS = [
+  'Goa', 'Jaipur', 'Manali', 'Udaipur', 'Agra', 'Kerala', 'Varanasi', 'Dubai',
+];
+
+const QUICK_BUDGET_OPTIONS = [
+  { label: '₹25,000', value: 25000, tag: 'Budget' },
+  { label: '₹50,000', value: 50000, tag: 'Popular' },
+  { label: '₹1,00,000', value: 100000, tag: 'Explorer' },
+  { label: '₹2,50,000', value: 250000, tag: 'Luxury' },
+];
+
 export default function CreateTripPage() {
   const router = useRouter();
 
-  // Form State
-  const [title, setTitle] = useState('');
+  // 1. Departure City
   const [startLocation, setStartLocation] = useState('Mumbai, India');
+  const [departureSearch, setDepartureSearch] = useState('Mumbai, India');
+  const [showDepartureDropdown, setShowDepartureDropdown] = useState(false);
+
+  // 2. Destination Stops
   const [destinationInput, setDestinationInput] = useState('');
   const [destinations, setDestinations] = useState(['Goa']);
+  const [showDestDropdown, setShowDestDropdown] = useState(false);
+
+  // 3. Trip Basics & Timing
+  const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [coverImage, setCoverImage] = useState(
     'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?w=800&fit=crop'
   );
 
   const [startDate, setStartDate] = useState('2026-11-10');
-  const [endDate, setEndDate] = useState('2026-11-17');
+  const [endDate, setEndDate] = useState('2026-11-15');
   const [travelers, setTravelers] = useState(2);
 
-  const [budget, setBudget] = useState(1200);
-  const [currency, setCurrency] = useState('USD');
+  // 4. Budget in Rupees (INR)
+  const [budget, setBudget] = useState(50000);
+  const [currency, setCurrency] = useState('INR');
+
+  // 5. Itinerary Generation Mode
+  const [itineraryMode, setItineraryMode] = useState('ai'); // 'ai' | 'custom'
+
+  // Preferences
   const [selectedPreferences, setSelectedPreferences] = useState(['Beach', 'Relaxation']);
 
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
+  const departureRef = useRef(null);
+  const destRef = useRef(null);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (departureRef.current && !departureRef.current.contains(e.target)) {
+        setShowDepartureDropdown(false);
+      }
+      if (destRef.current && !destRef.current.contains(e.target)) {
+        setShowDestDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   // Duration in days
   const durationDays = useMemo(() => {
-    return calculateDays(startDate, endDate);
+    return calculateDays(startDate, endDate) || 5;
   }, [startDate, endDate]);
 
-  // Autocomplete suggestions
-  const citySuggestions = useMemo(() => {
-    if (!destinationInput.trim()) return [];
+  // Autocomplete suggestions for Departure City
+  const departureSuggestions = useMemo(() => {
+    if (!departureSearch.trim() || departureSearch.length < 2) return [];
+    const q = departureSearch.toLowerCase();
     return mockCities
-      .filter((c) => c.name.toLowerCase().includes(destinationInput.toLowerCase()) && !destinations.includes(c.name))
-      .slice(0, 4);
+      .filter((c) => c.name.toLowerCase().includes(q) || c.country.toLowerCase().includes(q))
+      .slice(0, 5);
+  }, [departureSearch]);
+
+  // Autocomplete suggestions for Destination Stops
+  const destinationSuggestions = useMemo(() => {
+    if (!destinationInput.trim() || destinationInput.length < 2) return [];
+    const q = destinationInput.toLowerCase();
+    return mockCities
+      .filter((c) => c.name.toLowerCase().includes(q) && !destinations.includes(c.name))
+      .slice(0, 5);
   }, [destinationInput, destinations]);
 
+  const handleSelectDeparture = (cityName, country = 'India') => {
+    const formatted = `${cityName}, ${country}`;
+    setStartLocation(formatted);
+    setDepartureSearch(formatted);
+    setShowDepartureDropdown(false);
+  };
+
   const addDestination = (cityName) => {
-    if (!destinations.includes(cityName) && destinations.length < 10) {
-      setDestinations([...destinations, cityName]);
+    const trimmed = cityName.trim();
+    if (trimmed && !destinations.includes(trimmed) && destinations.length < 10) {
+      setDestinations([...destinations, trimmed]);
       setDestinationInput('');
+      setShowDestDropdown(false);
     }
   };
 
   const removeDestination = (cityName) => {
-    setDestinations(destinations.filter((d) => d !== cityName));
+    if (destinations.length > 1) {
+      setDestinations(destinations.filter((d) => d !== cityName));
+    }
   };
 
   const togglePreference = (pref) => {
@@ -88,23 +159,24 @@ export default function CreateTripPage() {
     }
   };
 
+  // Form submission: Synchronizes Trip, Playground Nodes, and Itinerary
   const handleSubmit = async (e) => {
     e.preventDefault();
     const newErrors = {};
 
-    if (!title || title.trim().length < 3) {
-      newErrors.title = 'Trip title must be at least 3 characters';
+    if (!startLocation || startLocation.trim().length < 2) {
+      newErrors.startLocation = 'Departure City is required';
     }
     if (destinations.length === 0) {
-      newErrors.destinations = 'Please add at least one destination';
+      newErrors.destinations = 'Please add at least one destination stop';
     }
     if (!startDate || !endDate) {
       newErrors.dates = 'Please select valid start and end dates';
     } else if (new Date(endDate) <= new Date(startDate)) {
       newErrors.dates = 'End date must be after start date';
     }
-    if (!budget || budget <= 0) {
-      newErrors.budget = 'Please enter a valid budget';
+    if (!budget || Number(budget) <= 0) {
+      newErrors.budget = 'Please enter a valid budget in Rupees (₹)';
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -114,23 +186,112 @@ export default function CreateTripPage() {
 
     setLoading(true);
     try {
+      const generatedTitle =
+        title.trim() ||
+        `${destinations.join(' & ')} Expedition from ${startLocation.split(',')[0]}`;
+
+      // 1. Create Trip Record
       const newTrip = await tripService.createTrip({
-        title,
+        title: generatedTitle,
         startLocation,
         destinations,
         description,
         coverImage,
         startDate,
         endDate,
-        travelers,
+        travelers: Number(travelers) || 2,
         budget: Number(budget),
-        currency,
+        currency: 'INR',
         preferences: selectedPreferences,
+        itineraryMode,
       });
 
+      // 2. Generate Fully Synchronized Payload (Nodes + Itinerary Schedule)
+      if (itineraryMode === 'ai') {
+        const plan = generateSynchronizedTripPlan({
+          tripId: newTrip.id,
+          startLocation,
+          destinations,
+          budget: Number(budget),
+          currency: 'INR',
+          startDate,
+          endDate,
+          travelers: Number(travelers) || 2,
+          preferences: selectedPreferences,
+        });
+
+        // Synchronize both stores simultaneously
+        await Promise.all([
+          playgroundService.saveNodes(newTrip.id, plan.nodes),
+          itineraryService.saveItinerary(newTrip.id, plan.itineraryDays),
+        ]);
+      } else {
+        // Custom Mode: Minimal Departure + Destination Hierarchy for user manual building
+        const minimalNodes = [
+          {
+            id: `node-dept-${newTrip.id}`,
+            type: 'city',
+            parentId: null,
+            tripId: newTrip.id,
+            title: `${startLocation.split(',')[0]} (Departure)`,
+            description: `Departure point on ${startDate}.`,
+            order: 0,
+            dayNumber: 1,
+            time: '08:00 AM',
+            estimatedCost: 0,
+            currency: 'INR',
+            category: 'Transport',
+            x: 100,
+            y: 180,
+          },
+          ...destinations.map((dest, i) => ({
+            id: `node-dest-${i}-${newTrip.id}`,
+            type: 'city',
+            parentId: `node-dept-${newTrip.id}`,
+            tripId: newTrip.id,
+            title: dest,
+            description: `Destination stop ${i + 1}`,
+            order: i + 1,
+            dayNumber: 1,
+            time: '11:00 AM',
+            estimatedCost: Math.round(Number(budget) / destinations.length),
+            currency: 'INR',
+            category: 'Destination',
+            x: 380,
+            y: 180 + i * 180,
+          })),
+        ];
+
+        const minimalItineraryDays = [
+          {
+            day: 1,
+            date: startDate,
+            title: `Day 1: Journey from ${startLocation.split(',')[0]} to ${destinations[0]}`,
+            location: destinations[0],
+            activities: [
+              {
+                id: `node-dept-${newTrip.id}`,
+                time: '08:00 AM',
+                name: `Departure from ${startLocation.split(',')[0]}`,
+                category: 'Transport',
+                duration: 180,
+                cost: 0,
+                location: startLocation,
+              },
+            ],
+          },
+        ];
+
+        await Promise.all([
+          playgroundService.saveNodes(newTrip.id, minimalNodes),
+          itineraryService.saveItinerary(newTrip.id, minimalItineraryDays),
+        ]);
+      }
+
+      // Seamless redirect to Interactive Playground
       router.push(`/playground/${newTrip.id}`);
     } catch (err) {
-      console.error('Failed to create trip', err);
+      console.error('Failed to create synchronized trip', err);
     } finally {
       setLoading(false);
     }
@@ -149,138 +310,264 @@ export default function CreateTripPage() {
       <PageContainer>
         <SectionHeader
           title="Create New Trip"
-          subtitle="Design your multi-city route, estimate expenses, and prepare the node canvas"
+          subtitle="Configure your departure, destination stops, budget in Rupees, and synchronized AI itinerary"
         />
 
         <div className={styles.layoutSplit}>
-          {/* Left Column: Multi-step Form */}
+          {/* Left Column: Form */}
           <form onSubmit={handleSubmit} className={styles.formCard} noValidate>
-            {/* Step 1: Trip Basics */}
+            {/* Step 1: Route & Stops */}
             <div className={styles.stepGroup}>
               <div className={styles.stepHeader}>
                 <div className={styles.stepCircle}>1</div>
-                <h2 className={styles.stepTitle}>Trip Basics</h2>
+                <h2 className={styles.stepTitle}>Route & Destination Stops</h2>
               </div>
 
-              <Input
-                id="trip-title"
-                label="Trip Title"
-                placeholder="e.g. Golden Goa Escape or Swiss Alps Expedition"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                error={errors.title}
-                required
-              />
-
-              <div className={styles.twoColRow}>
+              {/* Departure City (Mandatory) */}
+              <div ref={departureRef} style={{ position: 'relative' }}>
                 <Input
-                  id="trip-start-location"
-                  label="Departure City"
-                  placeholder="e.g. Mumbai, New York, London"
-                  value={startLocation}
-                  onChange={(e) => setStartLocation(e.target.value)}
-                  leftIcon={<MapPin size={16} />}
+                  id="trip-departure-city"
+                  label="Departure City *"
+                  placeholder="e.g. Mumbai, Delhi, Bengaluru..."
+                  value={departureSearch}
+                  onChange={(e) => {
+                    setDepartureSearch(e.target.value);
+                    setStartLocation(e.target.value);
+                    setShowDepartureDropdown(true);
+                  }}
+                  onFocus={() => setShowDepartureDropdown(true)}
+                  leftIcon={<MapPin size={16} color="var(--gt-blue, #2563eb)" />}
+                  error={errors.startLocation}
                   required
                 />
 
-                <div>
-                  <Input
-                    id="trip-destination-input"
-                    label="Add Destination Stops"
-                    placeholder="Type city name..."
-                    value={destinationInput}
-                    onChange={(e) => setDestinationInput(e.target.value)}
-                    leftIcon={<Globe size={16} />}
-                  />
-
-                  {/* Autocomplete dropdown */}
-                  {citySuggestions.length > 0 && (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        zIndex: 10,
-                        background: 'var(--gt-surface)',
-                        border: '1px solid var(--gt-border)',
-                        borderRadius: 'var(--gt-radius-md)',
-                        boxShadow: 'var(--gt-shadow-md)',
-                        marginTop: 4,
-                        width: '260px',
-                      }}
-                    >
-                      {citySuggestions.map((city) => (
-                        <div
-                          key={city.id}
-                          onClick={() => addDestination(city.name)}
-                          style={{
-                            padding: '8px 12px',
-                            cursor: 'pointer',
-                            fontSize: '13px',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                          }}
-                        >
-                          <strong>{city.name}</strong>
-                          <span style={{ color: 'var(--gt-text-muted)' }}>{city.country}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Destination Tag Chips */}
-              <div>
-                <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--gt-text-primary)' }}>
-                  Selected Stops ({destinations.length}):
-                </label>
-                <div className={styles.tagsWrapper}>
-                  {destinations.map((dest) => (
-                    <span key={dest} className={styles.tagChip}>
-                      <span>{dest}</span>
-                      <button
-                        type="button"
-                        onClick={() => removeDestination(dest)}
-                        className={styles.tagRemoveBtn}
-                        aria-label={`Remove ${dest}`}
+                {/* Autocomplete Dropdown for Departure */}
+                {showDepartureDropdown && departureSuggestions.length > 0 && (
+                  <div className={styles.autocompleteDropdown}>
+                    {departureSuggestions.map((city) => (
+                      <div
+                        key={city.id}
+                        className={styles.autocompleteItem}
+                        onClick={() => handleSelectDeparture(city.name, city.country)}
                       >
-                        <X size={12} />
-                      </button>
-                    </span>
+                        <strong>{city.name}</strong>
+                        <span style={{ color: 'var(--gt-text-muted)', fontSize: 12 }}>
+                          {city.state ? `${city.state}, ` : ''}{city.country}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Quick Departure City Pills */}
+                <div className={styles.quickPillsRow}>
+                  <span className={styles.quickPillLabel}>Popular Departures:</span>
+                  {POPULAR_DEPARTURE_CITIES.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      className={styles.quickCityPill}
+                      onClick={() => handleSelectDeparture(c, 'India')}
+                    >
+                      <MapPin size={10} />
+                      <span>{c}</span>
+                    </button>
                   ))}
                 </div>
-                {errors.destinations && (
-                  <span style={{ color: 'var(--gt-error)', fontSize: '12px', marginTop: 4, display: 'block' }}>
-                    {errors.destinations}
-                  </span>
-                )}
               </div>
 
-              <div>
-                <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--gt-text-primary)', display: 'block', marginBottom: 4 }}>
-                  Trip Notes / Description (Optional)
-                </label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Notes about highlights, travel buddies, or flights..."
-                  rows={3}
-                  style={{
-                    width: '100%',
-                    padding: 'var(--gt-space-3)',
-                    borderRadius: 'var(--gt-radius-md)',
-                    border: '1px solid var(--gt-border)',
-                    fontFamily: 'inherit',
-                    fontSize: 'var(--gt-text-sm)',
-                    outline: 'none',
+              {/* Destination Stops */}
+              <div ref={destRef} style={{ position: 'relative', marginTop: 8 }}>
+                <Input
+                  id="trip-destination-input"
+                  label="Add Destination Stops *"
+                  placeholder="Search and add destination stops (e.g. Goa, Jaipur, Manali)..."
+                  value={destinationInput}
+                  onChange={(e) => {
+                    setDestinationInput(e.target.value);
+                    setShowDestDropdown(true);
                   }}
+                  onFocus={() => setShowDestDropdown(true)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addDestination(destinationInput);
+                    }
+                  }}
+                  leftIcon={<Globe size={16} color="var(--gt-blue, #2563eb)" />}
+                  error={errors.destinations}
+                />
+
+                {/* Autocomplete Dropdown for Destination */}
+                {showDestDropdown && destinationSuggestions.length > 0 && (
+                  <div className={styles.autocompleteDropdown}>
+                    {destinationSuggestions.map((city) => (
+                      <div
+                        key={city.id}
+                        className={styles.autocompleteItem}
+                        onClick={() => addDestination(city.name)}
+                      >
+                        <div>
+                          <strong>{city.name}</strong>
+                          <span style={{ color: 'var(--gt-text-muted)', fontSize: 12, marginLeft: 8 }}>
+                            {city.state ? `${city.state}, ` : ''}{city.country}
+                          </span>
+                        </div>
+                        <span style={{ fontSize: 11, color: 'var(--gt-blue, #2563eb)', fontWeight: 600 }}>
+                          + Add Stop
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Quick Destination Pills */}
+                <div className={styles.quickPillsRow}>
+                  <span className={styles.quickPillLabel}>Quick Add:</span>
+                  {POPULAR_DESTINATIONS.map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      className={styles.quickCityPill}
+                      onClick={() => addDestination(d)}
+                    >
+                      <Plus size={10} />
+                      <span>{d}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Selected Destination Tag Chips */}
+                <div style={{ marginTop: 12 }}>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--gt-text-secondary)', display: 'block', marginBottom: 4 }}>
+                    Journey Sequence ({destinations.length} Stops):
+                  </label>
+                  <div className={styles.tagsWrapper}>
+                    {destinations.map((dest, idx) => (
+                      <span key={dest} className={styles.tagChip}>
+                        <span style={{ opacity: 0.7, fontSize: 10 }}>Stop {idx + 1}:</span>
+                        <strong>{dest}</strong>
+                        <button
+                          type="button"
+                          onClick={() => removeDestination(dest)}
+                          className={styles.tagRemoveBtn}
+                          aria-label={`Remove ${dest}`}
+                          title={destinations.length === 1 ? 'Minimum 1 destination required' : 'Remove stop'}
+                        >
+                          <X size={12} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Trip Title & Description (Optional) */}
+              <div style={{ marginTop: 8 }}>
+                <Input
+                  id="trip-title"
+                  label="Trip Title (Optional)"
+                  placeholder={`e.g. ${destinations.join(' & ')} Expedition from ${startLocation.split(',')[0]}`}
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  error={errors.title}
                 />
               </div>
             </div>
 
-            {/* Step 2: Dates & Travelers */}
+            {/* Step 2: Budget in Rupees (INR) */}
             <div className={styles.stepGroup}>
               <div className={styles.stepHeader}>
                 <div className={styles.stepCircle}>2</div>
+                <h2 className={styles.stepTitle}>Budget in Rupees (₹ INR)</h2>
+              </div>
+
+              <div>
+                <Input
+                  id="trip-budget-rupees"
+                  label="Target Trip Budget (in Rupees ₹) *"
+                  type="number"
+                  min="1000"
+                  step="1000"
+                  value={budget}
+                  onChange={(e) => setBudget(Number(e.target.value))}
+                  leftIcon={<span style={{ fontWeight: 700, fontSize: 16 }}>₹</span>}
+                  error={errors.budget}
+                  required
+                />
+
+                {/* Quick Rupee Budget Chips */}
+                <div className={styles.budgetChipsRow}>
+                  {QUICK_BUDGET_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      className={`${styles.budgetChip} ${budget === opt.value ? styles.budgetChipActive : ''}`}
+                      onClick={() => setBudget(opt.value)}
+                    >
+                      <span>{opt.label}</span>
+                      <span style={{ fontSize: 10, opacity: 0.7 }}>({opt.tag})</span>
+                    </button>
+                  ))}
+                </div>
+
+                <div style={{ marginTop: 8, fontSize: 12, color: 'var(--gt-text-muted)' }}>
+                  Selected Budget: <strong style={{ color: 'var(--gt-blue, #2563eb)' }}>₹{Number(budget).toLocaleString('en-IN')}</strong> (~₹{Math.round(Number(budget) / durationDays).toLocaleString('en-IN')} / day)
+                </div>
+              </div>
+            </div>
+
+            {/* Step 3: Itinerary Creation Mode */}
+            <div className={styles.stepGroup}>
+              <div className={styles.stepHeader}>
+                <div className={styles.stepCircle}>3</div>
+                <h2 className={styles.stepTitle}>Itinerary Creation Mode</h2>
+              </div>
+
+              <div className={styles.itineraryChoiceGrid}>
+                {/* AI Automatic Generation Card */}
+                <div
+                  className={`${styles.itineraryChoiceCard} ${itineraryMode === 'ai' ? styles.itineraryChoiceCardActive : ''}`}
+                  onClick={() => setItineraryMode('ai')}
+                >
+                  <div className={styles.itineraryChoiceHeader}>
+                    <div className={styles.itineraryChoiceIcon}>
+                      <Wand2 size={18} />
+                    </div>
+                    <span className={styles.itineraryChoiceBadge}>Recommended</span>
+                  </div>
+                  <div className={styles.itineraryChoiceTitle}>
+                    Automatic AI Itinerary Generation
+                  </div>
+                  <div className={styles.itineraryChoiceDesc}>
+                    AI will automatically generate a synchronized day-by-day plan with departure timing, morning-to-night slots, attractions, dining, stays, and budget in ₹.
+                  </div>
+                </div>
+
+                {/* Custom / Manual Itinerary Card */}
+                <div
+                  className={`${styles.itineraryChoiceCard} ${itineraryMode === 'custom' ? styles.itineraryChoiceCardActive : ''}`}
+                  onClick={() => setItineraryMode('custom')}
+                >
+                  <div className={styles.itineraryChoiceHeader}>
+                    <div className={styles.itineraryChoiceIcon} style={{ background: '#f1f5f9', color: '#475569' }}>
+                      <Edit3 size={18} />
+                    </div>
+                  </div>
+                  <div className={styles.itineraryChoiceTitle}>
+                    Custom / Manual Workspace
+                  </div>
+                  <div className={styles.itineraryChoiceDesc}>
+                    Start with an open canvas with your Departure City & Destination stops ready, allowing you to handcraft every node, time slot, and activity.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Step 4: Dates & Travelers */}
+            <div className={styles.stepGroup}>
+              <div className={styles.stepHeader}>
+                <div className={styles.stepCircle}>4</div>
                 <h2 className={styles.stepTitle}>Dates & Travelers</h2>
               </div>
 
@@ -305,20 +592,22 @@ export default function CreateTripPage() {
                 />
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--gt-bg-alt)', borderRadius: 'var(--gt-radius-md)' }}>
-                <span style={{ fontSize: '13px', color: 'var(--gt-text-secondary)' }}>Calculated Duration:</span>
-                <strong style={{ color: 'var(--gt-blue)', fontSize: '14px' }}>{durationDays} Days ({durationDays > 0 ? durationDays - 1 : 0} Nights)</strong>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--gt-bg-alt, #f8fafc)', borderRadius: 'var(--gt-radius-md, 8px)' }}>
+                <span style={{ fontSize: '13px', color: 'var(--gt-text-secondary)' }}>Duration:</span>
+                <strong style={{ color: 'var(--gt-blue, #2563eb)', fontSize: '14px' }}>
+                  {durationDays} Days ({durationDays > 1 ? durationDays - 1 : 0} Nights)
+                </strong>
               </div>
 
               <div>
                 <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--gt-text-primary)', display: 'block', marginBottom: 6 }}>
                   Number of Travelers:
                 </label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--gt-space-3)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <button
                     type="button"
                     onClick={() => setTravelers(Math.max(1, travelers - 1))}
-                    style={{ width: 36, height: 36, borderRadius: 'var(--gt-radius-md)', border: '1px solid var(--gt-border)', background: 'var(--gt-surface)', cursor: 'pointer', fontSize: 18 }}
+                    style={{ width: 36, height: 36, borderRadius: '8px', border: '1px solid var(--gt-border)', background: 'var(--gt-surface)', cursor: 'pointer', fontSize: 18 }}
                   >
                     -
                   </button>
@@ -328,70 +617,22 @@ export default function CreateTripPage() {
                   <button
                     type="button"
                     onClick={() => setTravelers(travelers + 1)}
-                    style={{ width: 36, height: 36, borderRadius: 'var(--gt-radius-md)', border: '1px solid var(--gt-border)', background: 'var(--gt-surface)', cursor: 'pointer', fontSize: 18 }}
+                    style={{ width: 36, height: 36, borderRadius: '8px', border: '1px solid var(--gt-border)', background: 'var(--gt-surface)', cursor: 'pointer', fontSize: 18 }}
                   >
                     +
                   </button>
                   <span style={{ fontSize: '13px', color: 'var(--gt-text-muted)' }}>
-                    {travelers === 1 ? 'Solo Adventurer' : `${travelers} Adventurers`}
+                    {travelers === 1 ? 'Solo Adventurer' : `${travelers} Travelers`}
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Step 3: Budget & Currency */}
+            {/* Step 5: Travel Preferences */}
             <div className={styles.stepGroup}>
               <div className={styles.stepHeader}>
-                <div className={styles.stepCircle}>3</div>
-                <h2 className={styles.stepTitle}>Budget Target</h2>
-              </div>
-
-              <div className={styles.twoColRow}>
-                <Input
-                  id="trip-budget"
-                  label="Target Total Budget"
-                  type="number"
-                  min="0"
-                  step="50"
-                  value={budget}
-                  onChange={(e) => setBudget(e.target.value)}
-                  leftIcon={<DollarSign size={16} />}
-                  error={errors.budget}
-                  required
-                />
-
-                <div>
-                  <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--gt-text-primary)', display: 'block', marginBottom: 4 }}>
-                    Base Currency
-                  </label>
-                  <select
-                    value={currency}
-                    onChange={(e) => setCurrency(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      borderRadius: 'var(--gt-radius-md)',
-                      border: '1px solid var(--gt-border)',
-                      background: 'var(--gt-surface)',
-                      fontSize: '14px',
-                      outline: 'none',
-                    }}
-                  >
-                    <option value="USD">USD ($ - US Dollar)</option>
-                    <option value="EUR">EUR (€ - Euro)</option>
-                    <option value="GBP">GBP (£ - British Pound)</option>
-                    <option value="INR">INR (₹ - Indian Rupee)</option>
-                    <option value="AED">AED (د.إ - UAE Dirham)</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Step 4: Travel Preferences */}
-            <div className={styles.stepGroup}>
-              <div className={styles.stepHeader}>
-                <div className={styles.stepCircle}>4</div>
-                <h2 className={styles.stepTitle}>Travel Styles & Preferences</h2>
+                <div className={styles.stepCircle}>5</div>
+                <h2 className={styles.stepTitle}>Travel Styles & Vibes</h2>
               </div>
 
               <div className={styles.prefGrid}>
@@ -413,13 +654,16 @@ export default function CreateTripPage() {
             </div>
 
             {/* Submit Bar */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 'var(--gt-space-4)', borderTop: '1px solid var(--gt-border)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '16px', borderTop: '1px solid var(--gt-border)' }}>
               <Link href="/dashboard" style={{ fontSize: '14px', color: 'var(--gt-text-secondary)', textDecoration: 'none' }}>
                 Cancel
               </Link>
 
               <Button type="submit" variant="primary" size="lg" loading={loading}>
-                <span>Generate Workspace & Canvas</span>
+                <Sparkles size={16} />
+                <span>
+                  {itineraryMode === 'ai' ? 'Create Trip & AI Itinerary' : 'Create Custom Workspace'}
+                </span>
                 <ArrowRight size={16} />
               </Button>
             </div>
@@ -431,55 +675,58 @@ export default function CreateTripPage() {
               <div className={styles.previewImageWrapper}>
                 <img
                   src={coverImage}
-                  alt={title || 'Trip Preview'}
+                  alt="Trip Preview"
                   className={styles.previewImage}
                 />
-                <div className={styles.previewBadge}>Live Node Blueprint</div>
+                <div className={styles.previewBadge}>
+                  {itineraryMode === 'ai' ? 'AI Sync Active' : 'Custom Canvas'}
+                </div>
               </div>
 
               <div className={styles.previewBody}>
-                <div className={styles.previewTripTitle}>{title || 'Your Trip Title'}</div>
+                <div className={styles.previewTripTitle}>
+                  {title || `${destinations.join(' & ')} Expedition`}
+                </div>
 
-                <div>
-                  <div style={{ fontSize: '11px', color: 'var(--gt-text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>
-                    Planned Stops:
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ fontSize: '11px', color: 'var(--gt-text-muted)', textTransform: 'uppercase' }}>
+                    Route:
                   </div>
-                  <div className={styles.previewStops}>
-                    {destinations.length > 0 ? (
-                      destinations.map((d, i) => (
-                        <span key={d} className={styles.previewStopTag}>
-                          {i + 1}. {d}
-                        </span>
-                      ))
-                    ) : (
-                      <span style={{ fontSize: 13, color: 'var(--gt-text-muted)' }}>No stops added yet</span>
-                    )}
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gt-text-primary)' }}>
+                    {startLocation} → {destinations.join(' → ')}
                   </div>
                 </div>
 
                 <div className={styles.previewStatsGrid}>
                   <div className={styles.previewStatItem}>
+                    <span className={styles.previewStatLabel}>Budget</span>
+                    <span className={styles.previewStatValue}>
+                      ₹{Number(budget).toLocaleString('en-IN')}
+                    </span>
+                  </div>
+
+                  <div className={styles.previewStatItem}>
                     <span className={styles.previewStatLabel}>Duration</span>
                     <span className={styles.previewStatValue}>{durationDays} Days</span>
                   </div>
+
+                  <div className={styles.previewStatItem}>
+                    <span className={styles.previewStatLabel}>Mode</span>
+                    <span className={styles.previewStatValue} style={{ fontSize: 13, color: 'var(--gt-blue, #2563eb)' }}>
+                      {itineraryMode === 'ai' ? 'AI Generation' : 'Manual'}
+                    </span>
+                  </div>
+
                   <div className={styles.previewStatItem}>
                     <span className={styles.previewStatLabel}>Travelers</span>
                     <span className={styles.previewStatValue}>{travelers}</span>
                   </div>
-                  <div className={styles.previewStatItem}>
-                    <span className={styles.previewStatLabel}>Budget Goal</span>
-                    <span className={styles.previewStatValue}>{formatCurrency(budget, currency)}</span>
-                  </div>
-                  <div className={styles.previewStatItem}>
-                    <span className={styles.previewStatLabel}>Pacing</span>
-                    <span className={styles.previewStatValue}>
-                      {durationDays > 0 ? formatCurrency(budget / durationDays, currency) : '$0'}/day
-                    </span>
-                  </div>
                 </div>
 
                 <div className={styles.previewFootnote}>
-                  💡 Submitting creates a customizable 3-panel interactive playground with draggable destination nodes and activity library.
+                  {itineraryMode === 'ai'
+                    ? 'All nodes, map pins, day numbers, and time slots will be automatically synchronized with your budget in Rupees (₹).'
+                    : 'A clean canvas with your Departure City and Destinations will be prepared for you to add custom nodes.'}
                 </div>
               </div>
             </div>

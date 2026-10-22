@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Bell,
   Calendar,
@@ -12,63 +13,45 @@ import {
   Trash2,
   ArrowRight,
   ShieldAlert,
+  Users,
+  CheckCircle2,
+  XCircle
 } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import PageContainer from '@/components/layout/PageContainer';
 import SectionHeader from '@/components/layout/SectionHeader';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
+import { useAuth } from '@/context/AuthContext';
+import { notificationService } from '@/lib/services';
 import styles from './notifications.module.css';
 
-const INITIAL_NOTIFICATIONS = [
-  {
-    id: 'notif-1',
-    category: 'trip',
-    title: 'Trip Starting Soon!',
-    desc: 'Golden Goa Escape starts in 10 days! All stops, hotel coordinates, and beach itineraries are ready for departure.',
-    time: '15 minutes ago',
-    unread: true,
-    href: '/itinerary/trip-001',
-    actionText: 'View Day-by-Day Plan',
-  },
-  {
-    id: 'notif-2',
-    category: 'ai',
-    title: 'AI Route Pacing Optimized',
-    desc: 'GlobeTrotter AI analyzed transit times between Paris and Santorini and recommends departing via evening direct flight to save 4 hours.',
-    time: '2 hours ago',
-    unread: true,
-    href: '/playground/trip-002',
-    actionText: 'Inspect Canvas Nodes',
-  },
-  {
-    id: 'notif-3',
-    category: 'budget',
-    title: 'Budget Alert & Savings Milestone',
-    desc: 'You saved $120 on accommodation estimates for your Tokyo & Kyoto Discovery trip compared to the target benchmark.',
-    time: 'Yesterday',
-    unread: false,
-    href: '/budget/trip-003',
-    actionText: 'Check Budget Breakdown',
-  },
-  {
-    id: 'notif-4',
-    category: 'system',
-    title: 'Cloud Workspace Synced',
-    desc: 'Your recent stop additions and playground nodes have been persisted and synchronized with your account profile.',
-    time: '2 days ago',
-    unread: false,
-    href: '/trips',
-    actionText: 'View All Trips',
-  },
-];
-
 export default function NotificationsPage() {
-  const [filter, setFilter] = useState('all'); // 'all' | 'unread' | 'trip' | 'ai' | 'budget'
-  const [items, setItems] = useState(INITIAL_NOTIFICATIONS);
+  const router = useRouter();
+  const { user } = useAuth();
+  const [filter, setFilter] = useState('all'); // 'all' | 'unread' | 'collaboration' | 'trip' | 'ai' | 'budget'
+  const [items, setItems] = useState([]);
+
+  useEffect(() => {
+    const loadNotifs = () => {
+      const data = notificationService.getNotifications(user?.email);
+      setItems(data);
+    };
+    loadNotifs();
+
+    window.addEventListener('gt_new_notification', loadNotifs);
+    window.addEventListener('gt_notifications_updated', loadNotifs);
+    window.addEventListener('storage', loadNotifs);
+    return () => {
+      window.removeEventListener('gt_new_notification', loadNotifs);
+      window.removeEventListener('gt_notifications_updated', loadNotifs);
+      window.removeEventListener('storage', loadNotifs);
+    };
+  }, [user?.email]);
 
   const filteredItems = items.filter((item) => {
     if (filter === 'unread') return item.unread;
+    if (filter === 'collaboration') return item.category === 'collaboration' || item.type === 'invite';
     if (filter === 'trip') return item.category === 'trip';
     if (filter === 'ai') return item.category === 'ai';
     if (filter === 'budget') return item.category === 'budget';
@@ -76,6 +59,7 @@ export default function NotificationsPage() {
   });
 
   const markAllRead = () => {
+    notificationService.markAllAsRead(user?.email);
     setItems(items.map((i) => ({ ...i, unread: false })));
   };
 
@@ -83,8 +67,23 @@ export default function NotificationsPage() {
     setItems([]);
   };
 
+  const handleAcceptInvite = (e, item) => {
+    e.preventDefault();
+    e.stopPropagation();
+    notificationService.acceptInvite(item.id, item.tripId);
+    router.push(`/playground/${item.tripId}`);
+  };
+
+  const handleDeclineInvite = (e, item) => {
+    e.preventDefault();
+    e.stopPropagation();
+    notificationService.declineInvite(item.id, item.tripId, user?.email);
+  };
+
   const getIcon = (category) => {
     switch (category) {
+      case 'collaboration':
+        return <Users size={18} />;
       case 'trip':
         return <Calendar size={18} />;
       case 'ai':
@@ -98,6 +97,8 @@ export default function NotificationsPage() {
 
   const getCircleClass = (category) => {
     switch (category) {
+      case 'collaboration':
+        return styles.iconCircleTrip;
       case 'trip':
         return styles.iconCircleTrip;
       case 'ai':
@@ -110,22 +111,17 @@ export default function NotificationsPage() {
   };
 
   return (
-    <div className={styles.wrapper}>
-      <Header
-        breadcrumbs={[
-          { label: 'Home', href: '/dashboard' },
-          { label: 'Notifications' },
-        ]}
-      />
+    <>
+      <Header />
 
       <PageContainer>
         <SectionHeader
-          title="Notifications & Alerts"
-          subtitle="Stay updated with journey milestones, AI schedule recommendations, and budget alerts"
+          title="Notifications & Activity Inbox"
+          subtitle="Trip invitations from travel companions, AI route recommendations, and milestone alerts"
           actions={
             <div style={{ display: 'flex', gap: 8 }}>
               {items.some((i) => i.unread) && (
-                <Button variant="outline" size="sm" onClick={markAllRead}>
+                <Button variant="secondary" size="sm" onClick={markAllRead}>
                   <Check size={14} />
                   <span>Mark All as Read</span>
                 </Button>
@@ -158,6 +154,13 @@ export default function NotificationsPage() {
           </button>
           <button
             type="button"
+            className={`${styles.tabBtn} ${filter === 'collaboration' ? styles.tabBtnActive : ''}`}
+            onClick={() => setFilter('collaboration')}
+          >
+            Trip Invitations ({items.filter((i) => i.category === 'collaboration' || i.type === 'invite').length})
+          </button>
+          <button
+            type="button"
             className={`${styles.tabBtn} ${filter === 'trip' ? styles.tabBtnActive : ''}`}
             onClick={() => setFilter('trip')}
           >
@@ -187,21 +190,20 @@ export default function NotificationsPage() {
               No notifications here
             </h3>
             <p style={{ fontSize: 13 }}>
-              You are all caught up! New alerts about your trips and AI suggestions will appear here.
+              You are all caught up! New alerts and invitations from fellow travelers will appear here.
             </p>
           </div>
         ) : (
           <div className={styles.notifCardList}>
             {filteredItems.map((item) => (
-              <Link
+              <div
                 key={item.id}
-                href={item.href}
                 className={`${styles.card} ${item.unread ? styles.cardUnread : ''}`}
-                onClick={() =>
+                onClick={() => {
                   setItems(
                     items.map((i) => (i.id === item.id ? { ...i, unread: false } : i))
-                  )
-                }
+                  );
+                }}
               >
                 <div className={`${styles.iconCircle} ${getCircleClass(item.category)}`}>
                   {getIcon(item.category)}
@@ -215,16 +217,61 @@ export default function NotificationsPage() {
 
                   <div className={styles.cardDesc}>{item.desc}</div>
 
-                  <div className={styles.cardAction}>
-                    <span>{item.actionText}</span>
-                    <ArrowRight size={13} />
-                  </div>
+                  {/* Actions Area */}
+                  {item.category === 'collaboration' || item.type === 'invite' ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12 }}>
+                      <button
+                        type="button"
+                        onClick={(e) => handleAcceptInvite(e, item)}
+                        style={{
+                          background: 'var(--gt-blue, #4169d8)',
+                          color: '#ffffff',
+                          border: 'none',
+                          padding: '6px 14px',
+                          borderRadius: 6,
+                          fontSize: 12,
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 6,
+                        }}
+                      >
+                        <CheckCircle2 size={13} />
+                        <span>Accept & Open Canvas</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => handleDeclineInvite(e, item)}
+                        style={{
+                          background: 'var(--gt-bg-alt, #f1f5f9)',
+                          color: 'var(--gt-text-secondary, #647184)',
+                          border: '1px solid var(--gt-border, #e1e7ee)',
+                          padding: '6px 12px',
+                          borderRadius: 6,
+                          fontSize: 12,
+                          fontWeight: 500,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Decline
+                      </button>
+                    </div>
+                  ) : (
+                    <Link href={item.href} className={styles.cardAction}>
+                      <span>{item.actionText}</span>
+                      <ArrowRight size={13} />
+                    </Link>
+                  )}
                 </div>
-              </Link>
+
+                {item.unread && <div className={styles.unreadDot} />}
+              </div>
             ))}
           </div>
         )}
       </PageContainer>
-    </div>
+    </>
   );
 }

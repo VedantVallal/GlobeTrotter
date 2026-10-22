@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Globe, Map, Compass, Settings, User, LogOut,
-  Plus, Bell, ChevronDown,
+  Plus, Bell, ChevronDown, Shield, Calendar,
 } from 'lucide-react';
 import { useState } from 'react';
 import clsx from 'clsx';
@@ -12,10 +12,12 @@ import styles from './NavRail.module.css';
 const NAV_ITEMS = [
   { href: '/dashboard', icon: Globe, label: 'Dashboard' },
   { href: '/trips', icon: Map, label: 'My Trips' },
+  { href: '/itinerary', icon: Calendar, label: 'Itinerary' },
   { href: '/create-trip', icon: Plus, label: 'New Trip', accent: true },
 ];
 
 const BOTTOM_ITEMS = [
+  { href: '/admin', icon: Shield, label: 'Admin Portal' },
   { href: '/notifications', icon: Bell, label: 'Notifications' },
   { href: '/settings', icon: Settings, label: 'Settings' },
   { href: '/profile', icon: User, label: 'Profile' },

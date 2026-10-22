@@ -176,7 +176,14 @@ export default function TripNodeCard({
           </div>
 
           <div className={styles.nodeMetaRow}>
-            {node.duration && (
+            {node.time && (
+              <span className={styles.nodeMetaPill} title={`Scheduled Time: ${node.time}`}>
+                <Clock size={10} />
+                <span>{node.time}</span>
+              </span>
+            )}
+
+            {node.duration && !node.time && (
               <span className={styles.nodeMetaPill}>
                 <Clock size={10} />
                 <span>{node.duration}</span>
@@ -184,8 +191,15 @@ export default function TripNodeCard({
             )}
 
             <span className={styles.nodeMetaPill}>
-              <DollarSign size={10} />
-              <span>{node.estimatedCost ? `$${node.estimatedCost}` : 'Free'}</span>
+              <span>
+                {node.estimatedCost !== undefined && node.estimatedCost !== null
+                  ? Number(node.estimatedCost) === 0
+                    ? 'Free'
+                    : node.currency === 'INR' || (!node.currency && Number(node.estimatedCost) > 500)
+                      ? `₹${Number(node.estimatedCost).toLocaleString('en-IN')}`
+                      : `$${node.estimatedCost}`
+                  : 'Free'}
+              </span>
             </span>
 
             {node.category && (

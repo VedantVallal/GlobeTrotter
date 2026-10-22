@@ -18,6 +18,9 @@ export default function TripCanvas({
   onDeleteNode,
   onAddChildNode,
   onAutoLayout,
+  isMiniMapOpen = false,
+  onToggleMiniMap,
+  children,
 }) {
   const canvasRef = useRef(null);
 
@@ -302,6 +305,9 @@ export default function TripCanvas({
         </button>
       </div>
 
+      {/* Floating Mini-Map Slot */}
+      {children}
+
       {/* Floating Canvas Viewport & Zoom Controls */}
       <CanvasControls
         zoomLevel={zoomLevel}
@@ -312,6 +318,8 @@ export default function TripCanvas({
         onAutoLayout={onAutoLayout}
         onCenterSelected={handleCenterSelected}
         hasSelection={Boolean(selectedNodeId)}
+        isMiniMapOpen={isMiniMapOpen}
+        onToggleMiniMap={onToggleMiniMap}
       />
     </div>
   );

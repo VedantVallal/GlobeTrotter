@@ -256,3 +256,197 @@
   color: var(--gt-text-muted);
   line-height: 1.4;
 }
+
+/* Quick Selection Pills */
+.quickPillsRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.quickPillLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gt-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.quickCityPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--gt-bg-alt, #f8fafc);
+  border: 1px solid var(--gt-border, #e2e8f0);
+  border-radius: 9999px;
+  padding: 3px 10px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--gt-text-secondary, #475569);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.quickCityPill:hover {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: #2563eb;
+  transform: translateY(-1px);
+}
+
+/* Autocomplete Dropdown List */
+.autocompleteDropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: var(--gt-surface, #ffffff);
+  border: 1px solid var(--gt-border, #e2e8f0);
+  border-radius: 10px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
+  margin-top: 4px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.autocompleteItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.12s ease;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.5);
+}
+
+.autocompleteItem:last-child {
+  border-bottom: none;
+}
+
+.autocompleteItem:hover {
+  background: #f1f5f9;
+}
+
+/* Budget Fast Selector Chips */
+.budgetChipsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.budgetChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--gt-border, #e2e8f0);
+  background: var(--gt-surface, #ffffff);
+  color: var(--gt-text-secondary, #475569);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.budgetChip:hover {
+  border-color: #93c5fd;
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.budgetChipActive {
+  background: #eff6ff;
+  border-color: #2563eb;
+  color: #2563eb;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.15);
+}
+
+/* Itinerary Mode Choice Grid */
+.itineraryChoiceGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 640px) {
+  .itineraryChoiceGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.itineraryChoiceCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  border-radius: 12px;
+  border: 2px solid var(--gt-border, #e2e8f0);
+  background: var(--gt-surface, #ffffff);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  text-align: left;
+}
+
+.itineraryChoiceCard:hover {
+  border-color: #cbd5e1;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.itineraryChoiceCardActive {
+  border-color: #2563eb !important;
+  background: #f8faff;
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.12);
+}
+
+.itineraryChoiceHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.itineraryChoiceIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.itineraryChoiceBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.itineraryChoiceTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.itineraryChoiceDesc {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.45;
+}
+

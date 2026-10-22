@@ -8,6 +8,7 @@ import {
   Maximize2,
   Workflow,
   Target,
+  Map,
 } from 'lucide-react';
 import styles from './playground.module.css';
 
@@ -20,6 +21,8 @@ export default function CanvasControls({
   onAutoLayout,
   onCenterSelected,
   hasSelection,
+  isMiniMapOpen,
+  onToggleMiniMap,
 }) {
   return (
     <aside className={styles.canvasControls} aria-label="Canvas Navigation and Layout Controls">
@@ -84,6 +87,18 @@ export default function CanvasControls({
           aria-label="Center on Selected Node"
         >
           <Target size={14} />
+        </button>
+      )}
+
+      {onToggleMiniMap && (
+        <button
+          type="button"
+          className={`${styles.canvasControlBtn} ${isMiniMapOpen ? styles.canvasControlBtnActive : ''}`}
+          onClick={onToggleMiniMap}
+          title={isMiniMapOpen ? 'Hide Mini-Map (M)' : 'Show Route Mini-Map (M)'}
+          aria-label="Toggle Route Mini-Map"
+        >
+          <Map size={14} />
         </button>
       )}
     </aside>

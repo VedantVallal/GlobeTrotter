@@ -338,6 +338,19 @@ export const itineraryService = {
 
     return true;
   },
+  async saveItinerary(tripId, days) {
+    if (typeof window !== 'undefined') {
+      itinerary = loadPersistedItinerary();
+    }
+    const updatedStore = { ...itinerary, [tripId]: days };
+    savePersistedItinerary(updatedStore);
+
+    try {
+      await setDoc(doc(db, 'itineraries', tripId), { items: days }, { merge: true });
+    } catch (e) { }
+
+    return days;
+  },
 };
 
 export const playgroundService = {
@@ -567,6 +580,7 @@ export const authService = {
 
       if (typeof window !== 'undefined') {
         localStorage.setItem('gt_active_user', JSON.stringify(activeUser));
+        notificationService.registerUserLocally(activeUser);
       }
 
       return {
@@ -632,6 +646,7 @@ export const authService = {
 
       if (typeof window !== 'undefined') {
         localStorage.setItem('gt_active_user', JSON.stringify(activeUser));
+        notificationService.registerUserLocally(activeUser);
       }
 
       return {
@@ -688,3 +703,8 @@ export const authService = {
     return this.logout();
   },
 };
+
+export { generateSynchronizedTripPlan } from './tripGenerator';
+export { adminService } from './adminService';
+export { notificationService } from './notificationService';
+

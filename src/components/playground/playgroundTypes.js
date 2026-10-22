@@ -489,3 +489,99 @@ export function runAutoLayout(nodes) {
 
   return updatedNodes;
 }
+
+// Geo-coordinates lookup map from citiesData.json
+const cityCoordsMap = new Map();
+for (const city of citiesData) {
+  if (city.coordinates) {
+    cityCoordsMap.set(city.name.toLowerCase(), city.coordinates);
+    if (city.id) cityCoordsMap.set(city.id.toLowerCase(), city.coordinates);
+  }
+}
+
+// Famous destination specific coordinates for high accuracy
+const PLACE_COORDINATES = {
+  'baga beach': { lat: 15.5553, lng: 73.7517 },
+  'fort aguada': { lat: 15.4924, lng: 73.7737 },
+  'palolem beach': { lat: 15.01, lng: 74.0232 },
+  'anjuna flea market': { lat: 15.58, lng: 73.743 },
+  'dudhsagar waterfalls': { lat: 15.3144, lng: 74.3143 },
+  'gateway of india': { lat: 18.922, lng: 72.8347 },
+  'marine drive': { lat: 18.9432, lng: 72.823 },
+  'elephanta caves': { lat: 18.9633, lng: 72.9315 },
+  'eiffel tower': { lat: 48.8584, lng: 2.2945 },
+  'louvre museum': { lat: 48.8606, lng: 2.3376 },
+};
+
+function hashString(str = '') {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) {
+    h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
+  }
+  return h;
+}
+
+export function resolveNodeGeo(node, allNodes = []) {
+  if (!node) return null;
+
+  // 1. Direct coordinates check
+  if (
+    node.coordinates &&
+    typeof node.coordinates.lat === 'number' &&
+    typeof node.coordinates.lng === 'number'
+  ) {
+    return { lat: node.coordinates.lat, lng: node.coordinates.lng };
+  }
+  if (typeof node.lat === 'number' && typeof node.lng === 'number') {
+    return { lat: node.lat, lng: node.lng };
+  }
+
+  const titleLower = (node.title || '').toLowerCase().trim();
+
+  // 2. Famous place coordinates lookup
+  if (PLACE_COORDINATES[titleLower]) {
+    return PLACE_COORDINATES[titleLower];
+  }
+
+  // 3. City direct lookup
+  if (cityCoordsMap.has(titleLower)) {
+    return cityCoordsMap.get(titleLower);
+  }
+
+  // 4. Trace parent hierarchy
+  let current = node;
+  while (current.parentId) {
+    const parent = allNodes.find((n) => n.id === current.parentId);
+    if (!parent) break;
+    const parentTitle = (parent.title || '').toLowerCase().trim();
+    if (cityCoordsMap.has(parentTitle)) {
+      const base = cityCoordsMap.get(parentTitle);
+      const hash = Math.abs(hashString(node.id || node.title));
+      const latOffset = ((hash % 100) - 50) * 0.0007;
+      const lngOffset = (((hash / 100) % 100) - 50) * 0.0007;
+      return { lat: base.lat + latOffset, lng: base.lng + lngOffset };
+    }
+    current = parent;
+  }
+
+  // 5. Check location field e.g. "Colaba, Mumbai"
+  if (node.location) {
+    const parts = node.location
+      .toLowerCase()
+      .split(',')
+      .map((s) => s.trim());
+    for (const part of parts) {
+      if (cityCoordsMap.has(part)) {
+        const base = cityCoordsMap.get(part);
+        const hash = Math.abs(hashString(node.id || node.title));
+        const latOffset = ((hash % 100) - 50) * 0.0007;
+        const lngOffset = (((hash / 100) % 100) - 50) * 0.0007;
+        return { lat: base.lat + latOffset, lng: base.lng + lngOffset };
+      }
+    }
+  }
+
+  // Default fallback (center of India)
+  return { lat: 18.922, lng: 72.8347 };
+}
+

@@ -17,6 +17,10 @@ import {
   Minimize2,
   Layers,
   AlertCircle,
+  LayoutGrid,
+  Map,
+  Users,
+  UserPlus,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { formatCurrency, formatDateRange } from '@/lib/utils/formatters';
@@ -37,6 +41,8 @@ export default function PlaygroundHeader({
   isFullscreen,
   onToggleFullscreen,
   onOpenShare,
+  viewMode = 'canvas',
+  onToggleViewMode,
 }) {
   return (
     <header className={styles.header}>
@@ -73,11 +79,12 @@ export default function PlaygroundHeader({
           {/* Deterministic Budget Pill */}
           <div
             className={`${styles.headerBudgetPill} ${summary.isOverBudget ? styles.headerBudgetOver : ''}`}
-            title={`Estimated Cost: $${summary.totalCost} / Budget: $${summary.tripBudget}`}
+            title={`Estimated Cost: ${trip.currency === 'INR' || summary.tripBudget > 5000 ? '₹' : '$'}${summary.totalCost.toLocaleString('en-IN')} / Budget: ${trip.currency === 'INR' || summary.tripBudget > 5000 ? '₹' : '$'}${summary.tripBudget.toLocaleString('en-IN')}`}
           >
-            <DollarSign size={12} />
             <span>
-              ${summary.totalCost} / ${summary.tripBudget}
+              {trip.currency === 'INR' || summary.tripBudget > 5000 ? '₹' : '$'}
+              {summary.totalCost.toLocaleString('en-IN')} / {trip.currency === 'INR' || summary.tripBudget > 5000 ? '₹' : '$'}
+              {summary.tripBudget.toLocaleString('en-IN')}
             </span>
             {summary.isOverBudget && (
               <span className={styles.overBudgetTag}>
@@ -85,6 +92,34 @@ export default function PlaygroundHeader({
               </span>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Center Section: View Mode Switcher (Canvas ⇄ Map) */}
+      <div className={styles.headerCenter}>
+        <div className={styles.headerViewSwitcher} role="tablist" aria-label="Playground View Modes">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={viewMode === 'canvas'}
+            className={`${styles.viewSwitchBtn} ${viewMode === 'canvas' ? styles.viewSwitchBtnActive : ''}`}
+            onClick={() => onToggleViewMode && onToggleViewMode('canvas')}
+            title="Interactive Canvas Workspace"
+          >
+            <LayoutGrid size={13} />
+            <span>Canvas</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={viewMode === 'map'}
+            className={`${styles.viewSwitchBtn} ${viewMode === 'map' ? styles.viewSwitchBtnActive : ''}`}
+            onClick={() => onToggleViewMode && onToggleViewMode('map')}
+            title="Interactive Route & Geo Map"
+          >
+            <Map size={13} />
+            <span>Map</span>
+          </button>
         </div>
       </div>
 
@@ -170,15 +205,98 @@ export default function PlaygroundHeader({
           </button>
         </Link>
 
-        {/* Share Button */}
+        {/* Live Collaborator Presence Stack */}
+        <div
+          onClick={onOpenShare}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            cursor: 'pointer',
+            padding: '2px 4px',
+            borderRadius: '20px',
+            transition: 'background 0.15s ease',
+          }}
+          title="Trip Collaborators (Click to Invite & Manage)"
+        >
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <div
+              style={{
+                width: 24,
+                height: 24,
+                borderRadius: '50%',
+                border: '2px solid #ffffff',
+                background: '#4169d8',
+                color: '#ffffff',
+                fontSize: 9,
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 3,
+                overflow: 'hidden',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              }}
+            >
+              <img
+                src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop"
+                alt="Aarav"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            </div>
+            <div
+              style={{
+                width: 24,
+                height: 24,
+                borderRadius: '50%',
+                border: '2px solid #ffffff',
+                background: '#0d9488',
+                color: '#ffffff',
+                fontSize: 9,
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginLeft: -8,
+                zIndex: 2,
+                overflow: 'hidden',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              }}
+            >
+              <img
+                src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop"
+                alt="Priya"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            </div>
+            <div
+              style={{
+                width: 20,
+                height: 20,
+                borderRadius: '50%',
+                border: '1.5px dashed var(--gt-border)',
+                background: 'var(--gt-bg-alt)',
+                color: 'var(--gt-blue)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginLeft: -6,
+                zIndex: 1,
+              }}
+            >
+              <UserPlus size={10} />
+            </div>
+          </div>
+        </div>
+
+        {/* Collaborate & Share Button */}
         <button
           type="button"
           className={styles.headerOutlineBtn}
           onClick={onOpenShare}
-          title="Share Trip Link"
+          title="Collaborate with travel companions & share link"
         >
-          <Share2 size={13} />
-          <span className={styles.headerBtnText}>Share</span>
+          <Users size={13} />
+          <span className={styles.headerBtnText}>Collaborate</span>
         </button>
       </div>
     </header>

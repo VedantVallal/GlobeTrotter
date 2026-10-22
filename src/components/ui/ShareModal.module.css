@@ -250,3 +250,196 @@
 .previewLink:hover {
   text-decoration: underline;
 }
+
+/* ── COLLABORATION STYLES ─────────────────────────────────────────────── */
+.tabBar {
+  display: flex;
+  background: var(--gt-bg-alt);
+  border-bottom: 1px solid var(--gt-border);
+  padding: 4px 16px;
+  gap: 8px;
+}
+
+.tabBtn {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: var(--gt-radius-md);
+  border: none;
+  background: transparent;
+  color: var(--gt-text-secondary);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all var(--gt-transition-fast);
+}
+
+.tabBtn:hover {
+  color: var(--gt-text-primary);
+}
+
+.tabBtnActive {
+  background: var(--gt-surface);
+  color: var(--gt-blue);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.inviteBox {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.inviteInputGroup {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.inviteInput {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: var(--gt-radius-md);
+  border: 1px solid var(--gt-border);
+  background: var(--gt-surface);
+  font-size: 12.5px;
+  color: var(--gt-text-primary);
+  outline: none;
+  font-family: inherit;
+}
+
+.inviteInput:focus {
+  border-color: var(--gt-blue);
+  box-shadow: 0 0 0 2px rgba(65, 105, 216, 0.15);
+}
+
+.roleSelect {
+  padding: 8px 10px;
+  border-radius: var(--gt-radius-md);
+  border: 1px solid var(--gt-border);
+  background: var(--gt-surface);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gt-text-primary);
+  outline: none;
+  cursor: pointer;
+}
+
+.collaboratorsList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.collaboratorRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: var(--gt-bg-alt);
+  border: 1px solid var(--gt-border);
+  border-radius: var(--gt-radius-md);
+}
+
+.collaboratorMeta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.collaboratorAvatarWrap {
+  position: relative;
+  width: 32px;
+  height: 32px;
+}
+
+.collaboratorAvatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--gt-blue-light);
+  color: var(--gt-blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.onlineDot {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  border: 1.5px solid #ffffff;
+}
+
+.collaboratorDetails {
+  display: flex;
+  flex-direction: column;
+}
+
+.collaboratorName {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--gt-text-primary);
+}
+
+.collaboratorEmail {
+  font-size: 11px;
+  color: var(--gt-text-muted);
+}
+
+.rolePill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 9999px;
+}
+
+.roleOwner {
+  background: #eef2ff;
+  color: #4169d8;
+  border: 1px solid #c7d2fe;
+}
+
+.roleEditor {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.roleViewer {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.removeCollabBtn {
+  background: transparent;
+  border: none;
+  color: var(--gt-text-muted);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.removeCollabBtn:hover {
+  color: #ef4444;
+  background: #fee2e2;
+}
+

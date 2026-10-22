@@ -1,9 +1,31 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import PlaygroundHeader from './PlaygroundHeader';
 import ExplorePanel from './ExplorePanel';
 import TripCanvas from './TripCanvas';
+
+// Dynamic SSR-safe TripGeoMap import
+const TripGeoMap = dynamic(() => import('./TripGeoMap'), {
+  ssr: false,
+  loading: () => (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100%',
+        color: 'var(--gt-text-muted, #64748b)',
+        fontSize: '13px',
+        fontWeight: 500,
+        background: '#f8fafc',
+      }}
+    >
+      Loading Interactive Route Map...
+    </div>
+  ),
+});
 import NodeDetailsPanel from './NodeDetailsPanel';
 import CopilotPanel from './CopilotPanel';
 import ReplaceNodeDialog from './ReplaceNodeDialog';
@@ -16,7 +38,8 @@ import {
   calculateTripSummary,
   runAutoLayout,
 } from './playgroundTypes';
-import { playgroundService, tripService } from '@/lib/services';
+import { playgroundService, tripService, itineraryService } from '@/lib/services';
+import { generateSynchronizedTripPlan } from '@/lib/services/tripGenerator';
 import styles from './playground.module.css';
 
 export default function TripPlayground({ trip, initialNodes = null }) {
@@ -37,6 +60,10 @@ export default function TripPlayground({ trip, initialNodes = null }) {
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [mobileTab, setMobileTab] = useState('journey'); // 'explore' | 'journey' | 'details' | 'copilot'
+
+  // Workspace View Mode: 'canvas' | 'map'
+  const [viewMode, setViewMode] = useState('canvas');
+  const [isMiniMapOpen, setIsMiniMapOpen] = useState(false);
 
   // Modals state
   const [shareModalOpen, setShareModalOpen] = useState(false);
@@ -63,7 +90,25 @@ export default function TripPlayground({ trip, initialNodes = null }) {
         if (stored && Array.isArray(stored) && stored.length > 0) {
           loaded = stored;
         } else {
-          loaded = createDefaultHierarchicalNodes(tripId);
+          // If trip has custom startLocation / destinations, dynamically generate synchronized plan
+          if (trip && (trip.destinations?.length > 0 || trip.startLocation)) {
+            const plan = generateSynchronizedTripPlan({
+              tripId,
+              startLocation: trip.startLocation || 'Mumbai, India',
+              destinations: trip.destinations || ['Goa'],
+              budget: trip.budget || 50000,
+              currency: trip.currency || 'INR',
+              startDate: trip.startDate || '2026-11-10',
+              endDate: trip.endDate || '2026-11-15',
+              travelers: trip.travelers || 2,
+              preferences: trip.preferences || ['Beach', 'Culture'],
+            });
+            loaded = plan.nodes;
+            playgroundService.saveNodes(tripId, loaded);
+            itineraryService.saveItinerary(tripId, plan.itineraryDays);
+          } else {
+            loaded = createDefaultHierarchicalNodes(tripId);
+          }
         }
       }
       setNodes(loaded);
@@ -74,7 +119,7 @@ export default function TripPlayground({ trip, initialNodes = null }) {
       }
     }
     init();
-  }, [tripId]);
+  }, [tripId, trip]);
 
   // Persist nodes helper
   const persistNodes = useCallback(
@@ -171,11 +216,20 @@ export default function TripPlayground({ trip, initialNodes = null }) {
         setDeleteTargetNode(null);
         setAddModalConfig({ isOpen: false, defaultParentId: null, defaultType: 'destination' });
       }
+      // 'M' shortcut: toggle route mini-map or toggle canvas/map view
+      else if (e.key === 'm' || e.key === 'M') {
+        e.preventDefault();
+        if (viewMode === 'map') {
+          setViewMode('canvas');
+        } else {
+          setIsMiniMapOpen((prev) => !prev);
+        }
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleUndo, handleRedo, selectedNodeId, nodes]);
+  }, [handleUndo, handleRedo, selectedNodeId, nodes, viewMode]);
 
   // Fullscreen toggle
   const handleToggleFullscreen = () => {
@@ -434,6 +488,8 @@ export default function TripPlayground({ trip, initialNodes = null }) {
         isFullscreen={isFullscreen}
         onToggleFullscreen={handleToggleFullscreen}
         onOpenShare={() => setShareModalOpen(true)}
+        viewMode={viewMode}
+        onToggleViewMode={setViewMode}
       />
 
       {/* 3-Panel Responsive Workspace */}
@@ -452,25 +508,60 @@ export default function TripPlayground({ trip, initialNodes = null }) {
           />
         </div>
 
-        {/* Center Panel: Primary Interactive Canvas */}
-        <TripCanvas
-          nodes={nodes}
-          selectedNodeId={selectedNodeId}
-          onSelectNode={handleSelectNode}
-          onUpdateNodeCoordinates={handleUpdateCoordinates}
-          onOpenAddModal={(defaultParentId, defaultType) =>
-            setAddModalConfig({
-              isOpen: true,
-              defaultParentId: defaultParentId || selectedNodeId || null,
-              defaultType: defaultType || 'destination',
-            })
-          }
-          onOpenReplaceModal={(node) => setReplaceTargetNode(node)}
-          onDuplicateNode={handleDuplicate}
-          onDeleteNode={handleDeleteRequest}
-          onAddChildNode={handleAddChild}
-          onAutoLayout={handleAutoLayout}
-        />
+        {/* Center Panel: Primary Interactive Canvas OR Full Route Map */}
+        {viewMode === 'map' ? (
+          <TripGeoMap
+            nodes={nodes}
+            selectedNodeId={selectedNodeId}
+            onSelectNode={handleSelectNode}
+            onOpenAddModal={(defaultParentId, defaultType) =>
+              setAddModalConfig({
+                isOpen: true,
+                defaultParentId: defaultParentId || selectedNodeId || null,
+                defaultType: defaultType || 'destination',
+              })
+            }
+            isMiniMap={false}
+          />
+        ) : (
+          <TripCanvas
+            nodes={nodes}
+            selectedNodeId={selectedNodeId}
+            onSelectNode={handleSelectNode}
+            onUpdateNodeCoordinates={handleUpdateCoordinates}
+            onOpenAddModal={(defaultParentId, defaultType) =>
+              setAddModalConfig({
+                isOpen: true,
+                defaultParentId: defaultParentId || selectedNodeId || null,
+                defaultType: defaultType || 'destination',
+              })
+            }
+            onOpenReplaceModal={(node) => setReplaceTargetNode(node)}
+            onDuplicateNode={handleDuplicate}
+            onDeleteNode={handleDeleteRequest}
+            onAddChildNode={handleAddChild}
+            onAutoLayout={handleAutoLayout}
+            isMiniMapOpen={isMiniMapOpen}
+            onToggleMiniMap={() => setIsMiniMapOpen((prev) => !prev)}
+          >
+            {/* Floating Mini-Map HUD on Canvas */}
+            {isMiniMapOpen && (
+              <div className={styles.canvasMiniMapFloating}>
+                <TripGeoMap
+                  nodes={nodes}
+                  selectedNodeId={selectedNodeId}
+                  onSelectNode={handleSelectNode}
+                  isMiniMap={true}
+                  onToggleExpand={() => {
+                    setIsMiniMapOpen(false);
+                    setViewMode('map');
+                  }}
+                  onCloseMiniMap={() => setIsMiniMapOpen(false)}
+                />
+              </div>
+            )}
+          </TripCanvas>
+        )}
 
         {/* Right Panel: Contextual Node Details OR AI Copilot */}
         <div className={`${styles.rightPanelContainer} ${mobileTab === 'details' || mobileTab === 'copilot' ? '' : styles.panelHideOnMobile}`}>

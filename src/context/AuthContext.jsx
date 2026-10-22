@@ -68,6 +68,14 @@ export function AuthProvider({ children }) {
 
         setUser(activeUser);
         localStorage.setItem('gt_active_user', JSON.stringify(activeUser));
+        try {
+          const raw = localStorage.getItem('gt_registered_users');
+          let list = raw ? JSON.parse(raw) : [];
+          if (!list.some((u) => u.email?.toLowerCase() === activeUser.email.toLowerCase())) {
+            list.push({ ...activeUser, role: 'Traveler', status: 'Active' });
+            localStorage.setItem('gt_registered_users', JSON.stringify(list));
+          }
+        } catch (e) {}
       } else {
         // Check if demo user was explicitly logged in
         const stored = localStorage.getItem('gt_active_user');

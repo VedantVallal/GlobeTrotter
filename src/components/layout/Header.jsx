@@ -15,10 +15,12 @@ import {
   MapPin,
   Sparkles,
   Calendar,
+  Users,
+  Check,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { mockUser } from '@/lib/data/mockUsers';
-import { authService } from '@/lib/services';
+import { authService, notificationService } from '@/lib/services';
 import styles from './Header.module.css';
 
 const DEFAULT_NOTIFICATIONS = [
@@ -56,10 +58,27 @@ export default function Header({ breadcrumbs = [], onSearch }) {
   const { user, setUser } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-  const [notifications, setNotifications] = useState(DEFAULT_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState([]);
   const [searchValue, setSearchValue] = useState('');
   const dropdownRef = useRef(null);
   const notifRef = useRef(null);
+
+  useEffect(() => {
+    const loadNotifs = () => {
+      const data = notificationService.getNotifications(user?.email);
+      setNotifications(data);
+    };
+    loadNotifs();
+
+    window.addEventListener('gt_new_notification', loadNotifs);
+    window.addEventListener('gt_notifications_updated', loadNotifs);
+    window.addEventListener('storage', loadNotifs);
+    return () => {
+      window.removeEventListener('gt_new_notification', loadNotifs);
+      window.removeEventListener('gt_notifications_updated', loadNotifs);
+      window.removeEventListener('storage', loadNotifs);
+    };
+  }, [user?.email]);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -159,9 +178,10 @@ export default function Header({ breadcrumbs = [], onSearch }) {
                   <button
                     type="button"
                     className={styles.notifClearBtn}
-                    onClick={() =>
-                      setNotifications(notifications.map((n) => ({ ...n, unread: false })))
-                    }
+                    onClick={() => {
+                      notificationService.markAllAsRead(user?.email);
+                      setNotifications(notifications.map((n) => ({ ...n, unread: false })));
+                    }}
                   >
                     Mark all read
                   </button>
@@ -169,36 +189,70 @@ export default function Header({ breadcrumbs = [], onSearch }) {
               </div>
 
               <div className={styles.notifList}>
-                {notifications.map((item) => (
-                  <Link
-                    key={item.id}
-                    href={item.href}
-                    className={`${styles.notifItem} ${item.unread ? styles.notifItemUnread : ''}`}
-                    onClick={() => {
-                      setNotifications(
-                        notifications.map((n) =>
-                          n.id === item.id ? { ...n, unread: false } : n
-                        )
-                      );
-                      setNotifOpen(false);
-                    }}
-                  >
-                    <div className={styles.notifIcon}>
-                      {item.type === 'ai' ? (
-                        <Sparkles size={14} />
-                      ) : item.type === 'trip' ? (
-                        <Calendar size={14} />
-                      ) : (
-                        <MapPin size={14} />
-                      )}
+                {notifications.length === 0 ? (
+                  <div style={{ padding: '24px 16px', textAlign: 'center', fontSize: 12, color: 'var(--gt-text-muted)' }}>
+                    No notifications right now
+                  </div>
+                ) : (
+                  notifications.map((item) => (
+                    <div
+                      key={item.id}
+                      className={`${styles.notifItem} ${item.unread ? styles.notifItemUnread : ''}`}
+                      onClick={() => {
+                        setNotifications(
+                          notifications.map((n) =>
+                            n.id === item.id ? { ...n, unread: false } : n
+                          )
+                        );
+                        setNotifOpen(false);
+                        router.push(item.href || `/playground/${item.tripId || 'trip-001'}`);
+                      }}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <div className={styles.notifIcon}>
+                        {item.category === 'collaboration' || item.type === 'invite' ? (
+                          <Users size={14} color="var(--gt-blue, #4169d8)" />
+                        ) : item.type === 'ai' || item.category === 'ai' ? (
+                          <Sparkles size={14} />
+                        ) : item.type === 'trip' || item.category === 'trip' ? (
+                          <Calendar size={14} />
+                        ) : (
+                          <MapPin size={14} />
+                        )}
+                      </div>
+                      <div className={styles.notifContent}>
+                        <div className={styles.notifItemTitle}>{item.title}</div>
+                        <div className={styles.notifItemDesc}>{item.desc}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
+                          <span className={styles.notifItemTime}>{item.time}</span>
+                          {(item.category === 'collaboration' || item.type === 'invite') && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                notificationService.acceptInvite(item.id, item.tripId);
+                                setNotifOpen(false);
+                                router.push(`/playground/${item.tripId}`);
+                              }}
+                              style={{
+                                background: 'var(--gt-blue, #4169d8)',
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: 4,
+                                padding: '2px 8px',
+                                fontSize: 10.5,
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                              }}
+                            >
+                              Open Canvas →
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <div className={styles.notifContent}>
-                      <div className={styles.notifItemTitle}>{item.title}</div>
-                      <div className={styles.notifItemDesc}>{item.desc}</div>
-                      <div className={styles.notifItemTime}>{item.time}</div>
-                    </div>
-                  </Link>
-                ))}
+                  ))
+                )}
               </div>
 
               <div className={styles.notifFooter}>
