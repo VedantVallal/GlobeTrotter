@@ -23,7 +23,7 @@ function loadPersistedTrips() {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
-    } catch (e) {}
+    } catch (e) { }
   }
   return [...mockTrips];
 }
@@ -34,7 +34,7 @@ function savePersistedTrips(newTrips) {
   if (typeof window !== 'undefined') {
     try {
       localStorage.setItem('gt_all_trips', JSON.stringify(newTrips));
-    } catch (e) {}
+    } catch (e) { }
   }
 }
 
@@ -47,7 +47,7 @@ function loadPersistedItinerary() {
         const parsed = JSON.parse(stored);
         if (parsed && typeof parsed === 'object') return parsed;
       }
-    } catch (e) {}
+    } catch (e) { }
   }
   return { ...mockItinerary };
 }
@@ -58,7 +58,7 @@ function savePersistedItinerary(newItinerary) {
   if (typeof window !== 'undefined') {
     try {
       localStorage.setItem('gt_itinerary_store', JSON.stringify(newItinerary));
-    } catch (e) {}
+    } catch (e) { }
   }
 }
 
@@ -104,7 +104,7 @@ export const tripService = {
       try {
         const stored = localStorage.getItem('gt_active_user');
         if (stored) currentUserId = JSON.parse(stored).id;
-      } catch (e) {}
+      } catch (e) { }
     }
 
     const currentTrips = await this.getAll();
@@ -145,7 +145,7 @@ export const tripService = {
     // Attempt Firestore persistence
     try {
       await setDoc(doc(db, 'trips', tripId), data, { merge: true });
-    } catch (e) {}
+    } catch (e) { }
 
     return updated.find(t => t.id === tripId) || updated[0];
   },
@@ -160,7 +160,7 @@ export const tripService = {
 
     try {
       await deleteDoc(doc(db, 'trips', tripId));
-    } catch (e) {}
+    } catch (e) { }
 
     return true;
   },
@@ -182,7 +182,7 @@ export const tripService = {
 
     try {
       await setDoc(doc(db, 'trips', copy.id), copy, { merge: true });
-    } catch (e) {}
+    } catch (e) { }
 
     return copy;
   },
@@ -201,24 +201,83 @@ export const tripService = {
   },
 };
 
+// In-memory cache for dynamically AI-generated cities
+const aiGeneratedCitiesCache = new Map();
+
 export const cityService = {
-  async getAll() { return mockCities; },
+  async getAll() {
+    return [...mockCities, ...Array.from(aiGeneratedCitiesCache.values())];
+  },
   async getCities() { return this.getAll(); },
-  async getById(cityId) { return mockCities.find(c => c.id === cityId) || null; },
+  async getById(cityId) {
+    if (!cityId) return null;
+    const lower = String(cityId).toLowerCase();
+
+    // 1. Direct or alias match in 276 famous cities dataset
+    let found = mockCities.find(c =>
+      c.id === cityId ||
+      c.legacyId === cityId ||
+      c.name.toLowerCase() === lower ||
+      c.name.toLowerCase().replace(/[^a-z0-9]/g, '-') === lower
+    );
+    if (found) return found;
+
+    // 2. Check dynamic AI cache
+    if (aiGeneratedCitiesCache.has(lower)) {
+      return aiGeneratedCitiesCache.get(lower);
+    }
+
+    // 3. AI Fallback: Generate city data dynamically on the fly
+    return await aiService.generateCityData(cityId);
+  },
   async getCityById(cityId) { return this.getById(cityId); },
   async search(query) {
-    const q = query.toLowerCase();
-    return mockCities.filter(c =>
-      c.name.toLowerCase().includes(q) || c.country.toLowerCase().includes(q)
+    if (!query || !query.trim()) return mockCities;
+    const q = query.trim().toLowerCase();
+
+    const matches = mockCities.filter(c =>
+      c.name.toLowerCase().includes(q) ||
+      c.country.toLowerCase().includes(q) ||
+      (c.region && c.region.toLowerCase().includes(q)) ||
+      (c.tags && c.tags.some(t => t.toLowerCase().includes(q)))
     );
+
+    if (matches.length > 0) return matches;
+
+    // If query returned 0 matches, check cached AI cities
+    for (const cached of aiGeneratedCitiesCache.values()) {
+      if (cached.name.toLowerCase().includes(q)) {
+        return [cached];
+      }
+    }
+
+    // Trigger AI Fallback for unique searched destination
+    if (q.length >= 3) {
+      const generated = await aiService.generateCityData(query);
+      return [generated];
+    }
+
+    return [];
   },
   async getByRegion(region) {
-    return region === 'All' ? mockCities : mockCities.filter(c => c.region === region);
+    const all = await this.getAll();
+    return region === 'All' ? all : all.filter(c => c.region === region);
   },
 };
 
 export const activityService = {
-  async getByCity(cityId) { return mockActivities.filter(a => a.cityId === cityId); },
+  async getByCity(cityId) {
+    const lower = String(cityId).toLowerCase();
+    const city = await cityService.getById(cityId);
+    if (city && city.activities && city.activities.length > 0) {
+      return city.activities;
+    }
+    return mockActivities.filter(a =>
+      a.cityId?.toLowerCase() === lower ||
+      a.cityName?.toLowerCase() === lower ||
+      a.cityName?.toLowerCase().includes(lower)
+    );
+  },
   async getActivities() { return mockActivities; },
   async getById(actId) { return mockActivities.find(a => a.id === actId) || null; },
   async search(query, cityId) {
@@ -259,7 +318,7 @@ export const itineraryService = {
 
     try {
       await setDoc(doc(db, 'itineraries', tripId), { items: updatedStore[tripId] }, { merge: true });
-    } catch (e) {}
+    } catch (e) { }
 
     return newItem;
   },
@@ -275,7 +334,7 @@ export const itineraryService = {
 
     try {
       await setDoc(doc(db, 'itineraries', tripId), { items: updatedStore[tripId] }, { merge: true });
-    } catch (e) {}
+    } catch (e) { }
 
     return true;
   },
@@ -287,7 +346,7 @@ export const playgroundService = {
       try {
         const stored = localStorage.getItem(`gt_nodes_${tripId}`);
         if (stored) return JSON.parse(stored);
-      } catch (e) {}
+      } catch (e) { }
     }
     return null;
   },
@@ -295,11 +354,11 @@ export const playgroundService = {
     if (typeof window !== 'undefined') {
       try {
         localStorage.setItem(`gt_nodes_${tripId}`, JSON.stringify(nodes));
-      } catch (e) {}
+      } catch (e) { }
     }
     try {
       await setDoc(doc(db, 'playground_nodes', tripId), { nodes }, { merge: true });
-    } catch (e) {}
+    } catch (e) { }
     return nodes;
   },
 };
@@ -366,6 +425,120 @@ export const aiService = {
     return {
       text: `For ${stops?.join(', ') || 'your destination'}, the golden hour along the coastline offers perfect conditions for kayaking and seaside dining. Let me know if you want budget recommendations or hotel comparisons!`,
     };
+  },
+
+  // AI Fallback: Generate full city structure on-the-fly for any unlisted city
+  async generateCityData(cityName) {
+    const rawName = String(cityName || '').replace(/^city-(?:ai-)?/i, '').replace(/-/g, ' ').trim();
+    const cleanName = rawName
+      ? rawName.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
+      : 'Unknown Destination';
+    const citySlug = cleanName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+    const cityId = `city-ai-${citySlug}`;
+
+    const areas = [
+      { id: `area-ai-${citySlug}-1`, name: `${cleanName} Central`, cityId, cityName: cleanName },
+      { id: `area-ai-${citySlug}-2`, name: `${cleanName} Historic Old Quarter`, cityId, cityName: cleanName },
+      { id: `area-ai-${citySlug}-3`, name: `${cleanName} Waterfront & Promenade`, cityId, cityName: cleanName },
+    ];
+
+    const destinations = [
+      {
+        id: `dest-ai-${citySlug}-1`,
+        cityId,
+        cityName: cleanName,
+        areaName: areas[0].name,
+        name: `${cleanName} Main Square & Landmark`,
+        type: 'destination',
+        category: 'Sightseeing',
+        duration: '2 hours',
+        estimatedCost: 10,
+        currency: 'USD',
+        image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=600&h=400&fit=crop',
+        description: `Iconic focal point and central architectural landmark of ${cleanName}.`,
+      },
+      {
+        id: `dest-ai-${citySlug}-2`,
+        cityId,
+        cityName: cleanName,
+        areaName: areas[1].name,
+        name: `${cleanName} Heritage Museum & Citadel`,
+        type: 'destination',
+        category: 'History',
+        duration: '2.5 hours',
+        estimatedCost: 8,
+        currency: 'USD',
+        image: 'https://images.unsplash.com/photo-1541849546-216549ae216d?w=600&h=400&fit=crop',
+        description: `Preserved ancient walls, cultural museum exhibits, and historic quarters of ${cleanName}.`,
+      },
+      {
+        id: `dest-ai-${citySlug}-3`,
+        cityId,
+        cityName: cleanName,
+        areaName: areas[2].name,
+        name: `${cleanName} Scenic Panorama Point`,
+        type: 'destination',
+        category: 'Nature',
+        duration: '1.5 hours',
+        estimatedCost: 0,
+        currency: 'USD',
+        image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=600&h=400&fit=crop',
+        description: `Panoramic elevated lookout offering sunset vistas over ${cleanName}.`,
+      },
+    ];
+
+    const activities = [
+      {
+        id: `act-ai-${citySlug}-1`,
+        cityId,
+        cityName: cleanName,
+        name: `${cleanName} Traditional Street Food & Market Tour`,
+        type: 'activity',
+        category: 'Food',
+        duration: '2 hours',
+        estimatedCost: 18,
+        currency: 'USD',
+        image: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600&h=400&fit=crop',
+        description: `Taste signature regional delicacies, street bites, and pastries in ${cleanName}.`,
+      },
+      {
+        id: `act-ai-${citySlug}-2`,
+        cityId,
+        cityName: cleanName,
+        name: `${cleanName} Guided Artisanal Heritage Walk`,
+        type: 'activity',
+        category: 'Culture',
+        duration: '2 hours',
+        estimatedCost: 15,
+        currency: 'USD',
+        image: 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=600&h=400&fit=crop',
+        description: `Wander ancient alleyways and meet local artisans, weavers, and craftspeople in ${cleanName}.`,
+      },
+    ];
+
+    const cityData = {
+      id: cityId,
+      name: cleanName,
+      country: 'Global Destination',
+      region: 'Global',
+      image: 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=600&h=400&fit=crop',
+      description: `AI-Synthesized Destination: Explore the landmarks, cultural districts, and culinary heritage of ${cleanName}.`,
+      avgCostPerDay: 75,
+      currency: 'USD',
+      timezone: 'UTC',
+      tags: ['AI Generated', 'Sightseeing', 'Culture'],
+      coordinates: { lat: 20.0, lng: 77.0 },
+      areas,
+      destinations,
+      activities,
+      isAiGenerated: true,
+    };
+
+    aiGeneratedCitiesCache.set(cleanName.toLowerCase(), cityData);
+    aiGeneratedCitiesCache.set(cityId, cityData);
+    aiGeneratedCitiesCache.set(citySlug, cityData);
+
+    return cityData;
   },
 };
 

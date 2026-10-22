@@ -1,58 +1,49 @@
 .shareRoot {
   min-height: 100vh;
-  background-color: var(--gt-bg);
-  color: var(--gt-text-primary);
-  padding-bottom: 90px;
+  background-color: var(--gt-bg, #f8fafc);
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 80px;
 }
 
-/* Minimal Public Header */
 .publicNav {
-  height: 56px;
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--gt-border);
+  height: 60px;
+  background: #ffffff;
+  border-bottom: 1px solid var(--gt-border, #e2e8f0);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 var(--gt-space-8);
+  padding: 0 24px;
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: var(--gt-space-2);
+  gap: 8px;
+  font-size: 16px;
   font-weight: 700;
-  font-size: var(--gt-text-md);
-  color: var(--gt-blue);
+  color: var(--gt-blue, #2563eb);
   text-decoration: none;
 }
 
 .demoBanner {
-  background: var(--gt-bg-alt);
-  border-bottom: 1px solid var(--gt-border);
-  padding: 8px 16px;
-  text-align: center;
+  background: #eff6ff;
+  border-bottom: 1px solid #bfdbfe;
+  color: #1d4ed8;
   font-size: 12px;
-  color: var(--gt-text-secondary);
+  font-weight: 600;
+  padding: 6px 16px;
+  text-align: center;
 }
 
-/* Hero Section */
 .hero {
   position: relative;
-  height: 440px;
+  height: 320px;
+  width: 100%;
   overflow: hidden;
   display: flex;
   align-items: flex-end;
-}
-
-@media (max-width: 768px) {
-  .hero {
-    height: 300px;
-  }
+  padding: 32px;
 }
 
 .heroImg {
@@ -66,185 +57,170 @@
 .heroOverlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    180deg,
-    rgba(15, 23, 42, 0.1) 0%,
-    rgba(15, 23, 42, 0.5) 50%,
-    rgba(15, 23, 42, 0.95) 100%
-  );
+  background: linear-gradient(to top, rgba(15, 23, 42, 0.85) 0%, rgba(15, 23, 42, 0.2) 60%, transparent 100%);
 }
 
 .heroContent {
   position: relative;
-  z-index: 2;
-  padding: var(--gt-space-8);
-  max-width: 900px;
-  margin: 0 auto;
-  width: 100%;
+  z-index: 10;
   color: #ffffff;
+  max-width: 800px;
 }
 
 .heroTitle {
-  font-size: clamp(2rem, 5vw, 3.25rem);
+  font-size: 32px;
   font-weight: 800;
-  letter-spacing: -0.02em;
-  margin-bottom: var(--gt-space-2);
+  margin: 0 0 10px;
+  color: #ffffff;
 }
 
 .heroMeta {
   display: flex;
   align-items: center;
-  gap: var(--gt-space-4);
-  font-size: var(--gt-text-sm);
-  color: #e2e8f0;
   flex-wrap: wrap;
+  gap: 12px;
+  font-size: 13px;
+  color: #e2e8f0;
 }
 
 .heroMetaItem {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
-/* Trip Summary Bar */
 .summaryBar {
-  background: var(--gt-surface);
-  border-bottom: 1px solid var(--gt-border);
-  padding: var(--gt-space-4) var(--gt-space-8);
+  background: #ffffff;
+  border-bottom: 1px solid var(--gt-border, #e2e8f0);
+  padding: 12px 24px;
 }
 
 .summaryBarInner {
-  max-width: 900px;
+  max-width: 1000px;
   margin: 0 auto;
   display: flex;
   align-items: center;
-  justify-content: space-around;
+  justify-content: space-between;
   flex-wrap: wrap;
-  gap: var(--gt-space-4);
+  gap: 16px;
 }
 
 .summaryMetric {
   display: flex;
   align-items: center;
-  gap: var(--gt-space-2);
-  font-size: var(--gt-text-sm);
-  color: var(--gt-text-secondary);
+  gap: 6px;
+  font-size: 13px;
+  color: var(--gt-text-secondary, #475569);
 }
 
-.summaryMetric strong {
-  color: var(--gt-text-primary);
-}
-
-/* Editorial Story Content */
 .editorialBody {
-  max-width: 860px;
-  margin: 40px auto 0;
-  padding: 0 var(--gt-space-6);
+  max-width: 900px;
+  width: 100%;
+  margin: 24px auto 0;
+  padding: 0 20px;
+  flex: 1;
 }
 
-/* Visual Route Strip */
 .routeVisualCard {
-  background: var(--gt-surface);
-  border: 1px solid var(--gt-border);
-  border-radius: var(--gt-radius-2xl);
-  padding: var(--gt-space-6);
-  margin-bottom: var(--gt-space-8);
-  box-shadow: var(--gt-shadow-sm);
+  background: #ffffff;
+  border: 1px solid var(--gt-border, #e2e8f0);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 28px;
 }
 
 .routeNodesRow {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  position: relative;
+  gap: 24px;
   overflow-x: auto;
-  padding: var(--gt-space-4) 0;
+  padding: 10px 0;
 }
 
 .routeStop {
   display: flex;
   flex-direction: column;
   align-items: center;
-  z-index: 2;
-  min-width: 100px;
+  min-width: 90px;
+  text-align: center;
 }
 
 .stopCircle {
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  background: var(--gt-blue);
-  color: #ffffff;
+  background: #eff6ff;
+  border: 2px solid #2563eb;
+  color: #2563eb;
+  font-weight: 700;
+  font-size: 13px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
-  font-size: 14px;
-  border: 3px solid #ffffff;
-  box-shadow: 0 4px 12px rgba(65, 105, 216, 0.4);
+  margin-bottom: 6px;
 }
 
 .stopName {
-  margin-top: 8px;
-  font-weight: 700;
-  font-size: 13px;
-  color: var(--gt-text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gt-text-primary, #0f172a);
 }
 
 .stopDates {
-  font-size: 11px;
-  color: var(--gt-text-muted);
+  font-size: 10px;
+  color: var(--gt-text-muted, #94a3b8);
 }
 
-/* Day-by-Day Schedule */
 .dayBlock {
-  background: var(--gt-surface);
-  border: 1px solid var(--gt-border);
-  border-radius: var(--gt-radius-2xl);
-  padding: var(--gt-space-6);
-  margin-bottom: var(--gt-space-6);
-  box-shadow: var(--gt-shadow-xs);
+  background: #ffffff;
+  border: 1px solid var(--gt-border, #e2e8f0);
+  border-radius: 10px;
+  margin-bottom: 16px;
+  overflow: hidden;
 }
 
 .dayBlockHeader {
+  background: #f8fafc;
+  border-bottom: 1px solid var(--gt-border, #e2e8f0);
+  padding: 12px 16px;
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: baseline;
-  padding-bottom: var(--gt-space-3);
-  border-bottom: 1px solid var(--gt-border);
-  margin-bottom: var(--gt-space-4);
 }
 
 .dayNumber {
-  font-size: var(--gt-text-xl);
-  font-weight: 800;
-  color: var(--gt-text-primary);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--gt-text-primary, #0f172a);
 }
 
 .dayDateLabel {
-  font-size: var(--gt-text-xs);
-  color: var(--gt-text-muted);
+  font-size: 12px;
+  color: var(--gt-text-secondary, #64748b);
 }
 
 .dayActivitiesList {
+  padding: 12px 16px;
   display: flex;
   flex-direction: column;
-  gap: var(--gt-space-3);
+  gap: 12px;
 }
 
 .dayActItem {
   display: flex;
-  gap: var(--gt-space-4);
-  padding: var(--gt-space-3);
-  border-radius: var(--gt-radius-lg);
-  background: var(--gt-bg-alt);
+  gap: 14px;
+  align-items: flex-start;
 }
 
 .actTime {
-  font-weight: 700;
-  font-size: 13px;
-  color: var(--gt-blue);
-  min-width: 50px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gt-blue, #2563eb);
+  background: #eff6ff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  min-width: 65px;
+  text-align: center;
 }
 
 .actDetails {
@@ -252,41 +228,46 @@
 }
 
 .actTitle {
+  font-size: 13px;
   font-weight: 600;
-  font-size: 14px;
-  margin-bottom: 2px;
+  color: var(--gt-text-primary, #0f172a);
 }
 
 .actSub {
-  font-size: 12px;
-  color: var(--gt-text-secondary);
+  font-size: 11px;
+  color: var(--gt-text-secondary, #64748b);
+  margin-top: 2px;
 }
 
-/* Sticky Bottom Share Bar */
 .stickyBottomBar {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-top: 1px solid var(--gt-border);
-  padding: var(--gt-space-3) var(--gt-space-6);
-  z-index: 50;
+  background: #ffffff;
+  border-top: 1px solid var(--gt-border, #e2e8f0);
+  padding: 12px 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--gt-space-4);
+  z-index: 50;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .stickyLeft {
   font-size: 13px;
-  color: var(--gt-text-secondary);
+  color: var(--gt-text-secondary, #64748b);
+  font-weight: 500;
+}
+
+@media (max-width: 640px) {
+  .stickyLeft {
+    display: none;
+  }
 }
 
 .stickyRight {
   display: flex;
   align-items: center;
-  gap: var(--gt-space-3);
+  gap: 8px;
 }

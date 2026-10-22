@@ -1,10 +1,12 @@
-// Mock Activities — tied to cities via cityId
-export const mockActivities = [
+import citiesData from './citiesData.json';
+
+// Seed legacy activities for backwards compatibility
+const legacyActivities = [
   // Goa
   {
     id: 'act-001', cityId: 'city-001', name: 'Calangute Beach Sunrise',
     category: 'Beach', duration: 90, estimatedCost: 0,
-    description: 'Peaceful sunrise walk and swim at Goa\'s most popular beach.',
+    description: "Peaceful sunrise walk and swim at Goa's most popular beach.",
     image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=200&fit=crop&auto=format',
     tags: ['Beach', 'Free', 'Morning'],
   },
@@ -40,7 +42,7 @@ export const mockActivities = [
   {
     id: 'act-006', cityId: 'city-002', name: 'Louvre Museum Morning',
     category: 'Culture', duration: 240, estimatedCost: 22,
-    description: 'World\'s largest art museum housing the Mona Lisa and thousands of masterpieces.',
+    description: "World's largest art museum housing the Mona Lisa and thousands of masterpieces.",
     image: 'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=300&h=200&fit=crop&auto=format',
     tags: ['Art', 'Culture', 'History'],
   },
@@ -58,41 +60,31 @@ export const mockActivities = [
     image: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=300&h=200&fit=crop&auto=format',
     tags: ['Dinner', 'Romantic', 'Evening'],
   },
-  // Tokyo
-  {
-    id: 'act-009', cityId: 'city-003', name: 'Senso-ji Temple at Dawn',
-    category: 'Culture', duration: 90, estimatedCost: 0,
-    description: 'Tokyo\'s oldest temple — most serene before the crowds arrive.',
-    image: 'https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=300&h=200&fit=crop&auto=format',
-    tags: ['Temple', 'Morning', 'Free'],
-  },
-  {
-    id: 'act-010', cityId: 'city-003', name: 'Tsukiji Outer Market',
-    category: 'Food', duration: 120, estimatedCost: 35,
-    description: 'Fresh sushi breakfast and Japanese street food at the famous market.',
-    image: 'https://images.unsplash.com/photo-1551218808-94e220e084d2?w=300&h=200&fit=crop&auto=format',
-    tags: ['Food', 'Morning', 'Sushi'],
-  },
-  {
-    id: 'act-011', cityId: 'city-003', name: 'Shibuya Crossing & Shopping',
-    category: 'Shopping', duration: 180, estimatedCost: 50,
-    description: 'Experience the world\'s busiest pedestrian crossing and explore Harajuku.',
-    image: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=300&h=200&fit=crop&auto=format',
-    tags: ['Shopping', 'Urban', 'Photography'],
-  },
-  // Santorini
-  {
-    id: 'act-012', cityId: 'city-004', name: 'Oia Sunset View',
-    category: 'Relaxation', duration: 60, estimatedCost: 0,
-    description: 'World-renowned sunset from Oia\'s iconic blue-domed church overlook.',
-    image: 'https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?w=300&h=200&fit=crop&auto=format',
-    tags: ['Sunset', 'Free', 'Romantic'],
-  },
-  {
-    id: 'act-013', cityId: 'city-004', name: 'Caldera Boat Tour',
-    category: 'Adventure', duration: 300, estimatedCost: 75,
-    description: 'Full-day sailing around the volcanic caldera with hot springs stop.',
-    image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=300&h=200&fit=crop&auto=format',
-    tags: ['Adventure', 'Scenic', 'Full-day'],
-  },
 ];
+
+// Extract activities across all 276 cities
+const datasetActivities = [];
+for (const city of citiesData) {
+  if (city.activities && Array.isArray(city.activities)) {
+    for (const act of city.activities) {
+      datasetActivities.push({
+        ...act,
+        duration: typeof act.duration === 'string' ? parseInt(act.duration) * 60 || 120 : (act.duration || 120),
+        cityName: city.name,
+      });
+    }
+  }
+}
+
+export const mockActivities = [...legacyActivities, ...datasetActivities];
+
+export function getActivitiesByCity(cityIdOrName) {
+  if (!cityIdOrName) return [];
+  const lower = String(cityIdOrName).toLowerCase();
+  return mockActivities.filter(
+    (a) =>
+      a.cityId?.toLowerCase() === lower ||
+      a.cityName?.toLowerCase() === lower ||
+      a.cityName?.toLowerCase().includes(lower)
+  );
+}

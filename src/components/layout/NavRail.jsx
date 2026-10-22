@@ -11,14 +11,14 @@ import styles from './NavRail.module.css';
 
 const NAV_ITEMS = [
   { href: '/dashboard', icon: Globe, label: 'Dashboard' },
-  { href: '/trips',     icon: Map,    label: 'My Trips'  },
+  { href: '/trips', icon: Map, label: 'My Trips' },
   { href: '/create-trip', icon: Plus, label: 'New Trip', accent: true },
 ];
 
 const BOTTOM_ITEMS = [
   { href: '/notifications', icon: Bell, label: 'Notifications' },
   { href: '/settings', icon: Settings, label: 'Settings' },
-  { href: '/profile',  icon: User,     label: 'Profile'  },
+  { href: '/profile', icon: User, label: 'Profile' },
 ];
 
 export default function NavRail() {

@@ -1,107 +1,45 @@
-// Mock Cities — stable IDs, realistic data
-export const mockCities = [
-  {
-    id: 'city-001',
-    name: 'Goa',
-    country: 'India',
-    region: 'Asia',
-    image: 'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?w=600&h=400&fit=crop&auto=format',
-    description: "India's beach paradise on the Arabian Sea coast.",
-    avgCostPerDay: 45,
-    currency: 'USD',
-    timezone: 'Asia/Kolkata',
-    tags: ['Beach', 'Food', 'Culture'],
-    coordinates: { lat: 15.2993, lng: 74.1240 },
-  },
-  {
-    id: 'city-002',
-    name: 'Paris',
-    country: 'France',
-    region: 'Europe',
-    image: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=600&h=400&fit=crop&auto=format',
-    description: 'The city of light, art, and world-class cuisine.',
-    avgCostPerDay: 180,
-    currency: 'USD',
-    timezone: 'Europe/Paris',
-    tags: ['Culture', 'Food', 'History'],
-    coordinates: { lat: 48.8566, lng: 2.3522 },
-  },
-  {
-    id: 'city-003',
-    name: 'Tokyo',
-    country: 'Japan',
-    region: 'Asia',
-    image: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=600&h=400&fit=crop&auto=format',
-    description: 'Ultra-modern skylines meet ancient temple traditions.',
-    avgCostPerDay: 130,
-    currency: 'USD',
-    timezone: 'Asia/Tokyo',
-    tags: ['Culture', 'Food', 'Shopping'],
-    coordinates: { lat: 35.6762, lng: 139.6503 },
-  },
-  {
-    id: 'city-004',
-    name: 'Santorini',
-    country: 'Greece',
-    region: 'Europe',
-    image: 'https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?w=600&h=400&fit=crop&auto=format',
-    description: 'Iconic white-washed villages above the Aegean Sea.',
-    avgCostPerDay: 160,
-    currency: 'USD',
-    timezone: 'Europe/Athens',
-    tags: ['Beach', 'Relaxation', 'Culture'],
-    coordinates: { lat: 36.3932, lng: 25.4615 },
-  },
-  {
-    id: 'city-005',
-    name: 'Dubai',
-    country: 'UAE',
-    region: 'Middle East',
-    image: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=600&h=400&fit=crop&auto=format',
-    description: 'Futuristic skylines, desert safaris, and luxury experiences.',
-    avgCostPerDay: 200,
-    currency: 'USD',
-    timezone: 'Asia/Dubai',
-    tags: ['Shopping', 'Adventure', 'Nightlife'],
-    coordinates: { lat: 25.2048, lng: 55.2708 },
-  },
-  {
-    id: 'city-006',
-    name: 'Kyoto',
-    country: 'Japan',
-    region: 'Asia',
-    image: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=600&h=400&fit=crop&auto=format',
-    description: 'Japan\'s cultural heart — temples, geishas, bamboo groves.',
-    avgCostPerDay: 110,
-    currency: 'USD',
-    timezone: 'Asia/Tokyo',
-    tags: ['Culture', 'History', 'Nature'],
-    coordinates: { lat: 35.0116, lng: 135.7681 },
-  },
-  {
-    id: 'city-007',
-    name: 'Bali',
-    country: 'Indonesia',
-    region: 'Asia',
-    image: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=600&h=400&fit=crop&auto=format',
-    description: 'Tropical paradise with rice terraces and spiritual temples.',
-    avgCostPerDay: 55,
-    currency: 'USD',
-    timezone: 'Asia/Makassar',
-    tags: ['Beach', 'Nature', 'Culture', 'Relaxation'],
-    coordinates: { lat: -8.3405, lng: 115.0920 },
-  },
-  {
-    id: 'city-008',
-    name: 'Barcelona',
-    country: 'Spain',
-    region: 'Europe',
-    image: 'https://images.unsplash.com/photo-1583422409516-2895a77efded?w=600&h=400&fit=crop&auto=format',
-    description: 'Gaudí architecture, vibrant beaches, and world-famous tapas.',
-    avgCostPerDay: 140,
-    currency: 'USD',
-    timezone: 'Europe/Madrid',
-    tags: ['Culture', 'Food', 'Beach', 'Nightlife'],
-    coordinates: { lat: 41.3851, lng: 2.1734 },
-  },
-];
+import citiesData from './citiesData.json';
+
+// Classic ID Aliases for backwards compatibility with initial seed trips
+const ID_ALIASES = {
+  'city-001': 'Goa',
+  'city-002': 'Paris',
+  'city-003': 'Tokyo',
+  'city-004': 'Santorini',
+  'city-005': 'Dubai',
+  'city-006': 'Kyoto',
+  'city-007': 'Bali (Ubud / Seminyak)',
+  'city-008': 'Barcelona',
+};
+
+// Map all 276 famous cities
+export const mockCities = citiesData.map((c) => {
+  // Check if this city matches any legacy alias
+  for (const [legacyId, aliasName] of Object.entries(ID_ALIASES)) {
+    if (c.name.toLowerCase() === aliasName.toLowerCase() || c.name.toLowerCase().includes(aliasName.toLowerCase())) {
+      return {
+        ...c,
+        legacyId,
+      };
+    }
+  }
+  return c;
+});
+
+// Fast lookup maps
+export const citiesById = new Map();
+export const citiesByName = new Map();
+
+for (const city of mockCities) {
+  citiesById.set(city.id, city);
+  citiesByName.set(city.name.toLowerCase(), city);
+  if (city.legacyId) {
+    citiesById.set(city.legacyId, city);
+  }
+}
+
+export function getCity(idOrName) {
+  if (!idOrName) return null;
+  const lower = String(idOrName).toLowerCase();
+  return citiesById.get(idOrName) || citiesByName.get(lower) || null;
+}
