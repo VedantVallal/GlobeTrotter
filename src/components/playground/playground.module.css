@@ -648,6 +648,161 @@
 }
 
 /* ==========================================================================
+   Context-Aware Explore Filter Banner & Section Headers
+   ========================================================================== */
+.exploreContextBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+.exploreContextLeft {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.exploreContextDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #2563eb;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+.exploreContextInfo {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.exploreContextLabel {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: #1d4ed8;
+  line-height: 1;
+}
+
+.exploreContextTarget {
+  font-size: 11px;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.exploreContextToggle {
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 6px;
+  border: 1px solid #bfdbfe;
+  background: #ffffff;
+  color: #2563eb;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.exploreContextToggle:hover {
+  background: #dbeafe;
+}
+
+.exploreContextToggleInactive {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #475569;
+}
+
+.tripCitiesFilterRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.tripCitiesFilterRow::-webkit-scrollbar {
+  display: none;
+}
+
+.tripCityChip {
+  padding: 2px 8px;
+  border-radius: 9999px;
+  border: 1px solid var(--gt-border, #e2e8f0);
+  background: #f8fafc;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--gt-text-secondary, #475569);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.12s ease;
+}
+
+.tripCityChip:hover {
+  background: #f1f5f9;
+}
+
+.tripCityChipActive {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
+}
+
+.exploreSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 2px 2px;
+  margin-top: 4px;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 4px;
+}
+
+.exploreSectionTitle {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--gt-text-secondary, #64748b);
+}
+
+.exploreSectionBadge {
+  font-size: 10px;
+  font-weight: 700;
+  color: #2563eb;
+  background: #eff6ff;
+  padding: 1px 6px;
+  border-radius: 9999px;
+}
+
+.areaItemBadge {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: #4f46e5;
+  background: #eef2ff;
+  padding: 1px 5px;
+  border-radius: 4px;
+  margin-left: 4px;
+}
+
+/* ==========================================================================
    4. Center Canvas
    ========================================================================== */
 .tripCanvasRoot {

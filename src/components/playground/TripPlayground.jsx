@@ -234,8 +234,8 @@ export default function TripPlayground({ trip, initialNodes = null }) {
     let newX = 100;
     let newY = 180;
     if (parent) {
-      newX = parent.x + 280;
-      newY = parent.y + siblings.length * 95;
+      newX = parent.x + 320;
+      newY = parent.y + siblings.length * 110;
     } else if (siblings.length > 0) {
       const lastSibling = siblings[siblings.length - 1];
       newX = lastSibling.x;
