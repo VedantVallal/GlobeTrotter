@@ -398,45 +398,87 @@ export const sharingService = {
   },
 };
 
-// AI Service — interface ready for real LLM integration
+// AI Service — connected to Next.js /api/chat (Gemini API with offline intelligence fallback)
 export const aiService = {
   async chat(messages, tripContext) {
-    await new Promise(r => setTimeout(r, 1000));
-    const lastMsg = messages[messages.length - 1]?.content?.toLowerCase() || '';
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: (messages || []).map(m => ({
+            role: m.sender === 'user' || m.role === 'user' ? 'user' : 'assistant',
+            content: m.text || m.content || '',
+          })),
+          tripContext: tripContext || {},
+        }),
+      });
 
-    if (lastMsg.includes('budget') || lastMsg.includes('cost')) {
+      if (!res.ok) {
+        throw new Error(`Chat API error: status ${res.status}`);
+      }
+
+      const data = await res.json();
       return {
         role: 'assistant',
-        content: `Based on your budget, I'd suggest allocating roughly 35% to accommodation, 25% to food, 20% to transport, and 20% to activities. For your stops, that keeps daily pacing comfortable and flexible.`,
+        content: data.content || '',
+        text: data.content || '',
+        suggestedStop: data.suggestedStop || null,
+        provider: data.provider || 'gemini',
       };
-    }
-    if (lastMsg.includes('itinerary') || lastMsg.includes('plan')) {
+    } catch (err) {
+      console.warn('aiService.chat fallback due to network/client error:', err);
+      // Safe client-side fallback if fetch fails
+      const lastMsg = (messages[messages.length - 1]?.text || messages[messages.length - 1]?.content || '').toLowerCase();
+      let fallbackText = "I've reviewed your itinerary structure and have tailored this suggestion:";
+      let suggestedStop = null;
+
+      if (lastMsg.includes('food') || lastMsg.includes('eat') || lastMsg.includes('restaurant')) {
+        fallbackText = "Here are top culinary highlights: Seek authentic local eateries and coastal seafood thalis for the truest regional flavors.";
+        suggestedStop = {
+          title: 'Authentic Local Culinary Hub',
+          type: 'food',
+          category: 'Food',
+          duration: '1.5 hours',
+          estimatedCost: 25,
+          description: 'Famous local kitchen serving regional specialties and freshly caught seafood.',
+          image: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=500&h=300&fit=crop',
+        };
+      } else if (lastMsg.includes('sunset') || lastMsg.includes('view') || lastMsg.includes('beach')) {
+        fallbackText = "Panoramic coastal vantage points offer stunning golden hour views. Highly recommended on your afternoon schedule.";
+        suggestedStop = {
+          title: 'Scenic Sunset Lookout',
+          type: 'destination',
+          category: 'Sightseeing',
+          duration: '2 hours',
+          estimatedCost: 0,
+          description: 'Dramatic coastal ruins with 360-degree ocean and river views.',
+          image: 'https://images.unsplash.com/photo-1590050752117-238cb0fb12b1?w=500&h=300&fit=crop',
+        };
+      } else if (lastMsg.includes('budget') || lastMsg.includes('cost')) {
+        fallbackText = "Budget Breakdown: 35% Accommodation, 25% Food & Dining, 20% Transport, and 20% Activities ensures a flexible and enjoyable trip.";
+      } else {
+        fallbackText = "Based on your journey pace, clustering geographically nearby stops and keeping 90-minute buffers between activities keeps your itinerary relaxed and memorable.";
+      }
+
       return {
         role: 'assistant',
-        content: `Here's an optimal flow:\n\n• Days 1–2: Coastal highlights & sunset viewpoints\n• Days 3–4: Cultural heritage, churches & spice estates\n• Day 5: Relaxed beaches & farewell seafood dinner\n\nAll stops are arranged to minimize travel time!`,
+        content: fallbackText,
+        text: fallbackText,
+        suggestedStop,
+        provider: 'offline-fallback',
       };
     }
-    return {
-      role: 'assistant',
-      content: `I've analyzed your itinerary. Adding local spice plantation tours or seaside cafes during twilight will give you the best mix of culture and relaxation!`,
-    };
   },
 
   async generateSuggestions({ prompt, tripContext, stops }) {
-    await new Promise(r => setTimeout(r, 1200));
-    const p = prompt.toLowerCase();
-    if (p.includes('food') || p.includes('eat') || p.includes('gem')) {
-      return {
-        text: `Here are 3 handpicked culinary gems for ${stops?.join(' and ') || 'your stops'}:\n\n1. Fisherman's Wharf (Fresh crab masala by the river)\n2. Mum's Kitchen (Authentic homestyle Goan vindaloo)\n3. Martin's Corner (Legendary seafood & coastal vibes)\n\nWould you like me to assign one of these to your evening slot?`,
-      };
-    }
-    if (p.includes('route') || p.includes('pacing') || p.includes('optimize')) {
-      return {
-        text: `To optimize transit between ${stops?.join(' → ') || 'stops'}:\n\n• Cluster Northern beach excursions in the morning before midday peak.\n• Schedule heritage trails in Old Goa for afternoon.\n• Keep South Goa for the final relaxing stretch.\n\nThis saves roughly 2.5 hours of transit time across your trip!`,
-      };
-    }
+    const res = await this.chat(
+      [{ role: 'user', content: prompt }],
+      { ...tripContext, stops }
+    );
     return {
-      text: `For ${stops?.join(', ') || 'your destination'}, the golden hour along the coastline offers perfect conditions for kayaking and seaside dining. Let me know if you want budget recommendations or hotel comparisons!`,
+      text: res.content,
+      suggestedStop: res.suggestedStop,
     };
   },
 

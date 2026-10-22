@@ -1608,6 +1608,11 @@
   line-height: 1.45;
 }
 
+.formattedText {
+  display: flex;
+  flex-direction: column;
+}
+
 .chatBubbleUser {
   align-self: flex-end;
   background: #2563eb;

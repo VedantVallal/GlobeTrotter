@@ -2,6 +2,7 @@
 import { Suspense } from 'react';
 import NavRail from './NavRail';
 import MobileNav from './MobileNav';
+import FloatingChatbot from '@/components/chatbot/FloatingChatbot';
 import styles from './AppShell.module.css';
 
 export default function AppShell({ children }) {
@@ -14,6 +15,7 @@ export default function AppShell({ children }) {
       <main className={styles.main}>
         {children}
       </main>
+      <FloatingChatbot />
     </div>
   );
 }

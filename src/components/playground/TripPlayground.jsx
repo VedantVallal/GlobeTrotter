@@ -48,6 +48,7 @@ export default function TripPlayground({ trip, initialNodes = null }) {
   // Nodes state
   const [nodes, setNodes] = useState([]);
   const [selectedNodeId, setSelectedNodeId] = useState(null);
+  const [copilotInitialPrompt, setCopilotInitialPrompt] = useState('');
   const [saveStatus, setSaveStatus] = useState('Saved');
 
   // Undo / Redo History Stack (bounded to 25 snapshots)
@@ -577,12 +578,17 @@ export default function TripPlayground({ trip, initialNodes = null }) {
                 onDelete={handleDeleteRequest}
                 onAddChild={handleAddChild}
                 onMoveOrder={handleMoveOrder}
-                onOpenCopilot={() => setSelectedNodeId(null)}
+                onOpenCopilot={() => {
+                  setCopilotInitialPrompt(`What are the top insider tips, best timing to visit, and nearby recommendations for "${selectedNode.title}"?`);
+                  setSelectedNodeId(null);
+                }}
               />
             ) : (
               <CopilotPanel
                 trip={trip}
                 nodesCount={nodes.length}
+                nodes={nodes}
+                initialQuery={copilotInitialPrompt}
                 onClose={() => {
                   setRightPanelOpen(false);
                   if (mobileTab === 'copilot') setMobileTab('journey');
