@@ -450,3 +450,230 @@
   line-height: 1.45;
 }
 
+/* PDF Page 1 Workflow: Plan a New Trip Card */
+.planNewTripContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 16px;
+  min-height: calc(100vh - 120px);
+}
+
+.planNewTripCard {
+  width: 100%;
+  max-width: 520px;
+  background: var(--gt-surface, #ffffff);
+  border: 1px solid var(--gt-border, #e2e8f0);
+  border-radius: 20px;
+  padding: 36px 32px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.cardTitle {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--gt-text-primary, #0f172a);
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fieldLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gt-text-secondary, #475569);
+}
+
+.whereToInputBox {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--gt-border, #cbd5e1);
+  border-radius: 12px;
+  padding: 10px 14px;
+  background: #ffffff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  position: relative;
+}
+
+.whereToInputBox:focus-within {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.whereToInput {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 15px;
+  font-weight: 600;
+  color: #0f172a;
+  background: transparent;
+}
+
+.whereToAddBtn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.whereToAddBtn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.datesRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.dateInputBox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--gt-border, #cbd5e1);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #ffffff;
+  transition: border-color 0.15s ease;
+}
+
+.dateInputBox:focus-within {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.dateInput {
+  border: none;
+  outline: none;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #0f172a;
+  background: transparent;
+  width: 100%;
+}
+
+.daysCountBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  align-self: flex-start;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  background: #e0f2fe;
+  color: #0369a1;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.dateErrorMessage {
+  color: #ef4444;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.tripmatesRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 2px;
+}
+
+.inviteBtn {
+  background: transparent;
+  border: none;
+  color: #2563eb;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  transition: background 0.15s ease;
+}
+
+.inviteBtn:hover {
+  background: #eff6ff;
+}
+
+.friendsSelectBox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  color: #475569;
+  font-weight: 500;
+}
+
+.friendsSelect {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 13px;
+  color: #0f172a;
+  background: #ffffff;
+  outline: none;
+  cursor: pointer;
+}
+
+.startPlanningBtn {
+  margin-top: 8px;
+  width: 100%;
+  padding: 14px 20px;
+  border-radius: 9999px;
+  border: none;
+  background: #f95c47;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 14px rgba(249, 92, 71, 0.35);
+  transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.startPlanningBtn:hover:not(:disabled) {
+  background: #e84a35;
+  box-shadow: 0 6px 18px rgba(249, 92, 71, 0.45);
+  transform: translateY(-1px);
+}
+
+.startPlanningBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.guideSublink {
+  text-align: center;
+  font-size: 13px;
+  color: #64748b;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.guideSublink:hover {
+  color: #0f172a;
+}
+
+

@@ -157,14 +157,17 @@ export default function TripCanvas({
       if (node.parentId && nodeMap.has(node.parentId)) {
         const parent = nodeMap.get(node.parentId);
 
-        const startX = parent.x + CARD_W;
+        const isLeftChild = node.x < parent.x;
+        const startX = isLeftChild ? parent.x : parent.x + CARD_W;
         const startY = parent.y + CARD_H_MID;
-        const endX = node.x;
+        const endX = isLeftChild ? node.x + CARD_W : node.x;
         const endY = node.y + CARD_H_MID;
 
-        // Smooth cubic bezier curve
+        // Smooth cubic bezier curve for left or right branching
         const dx = Math.abs(endX - startX) * 0.5;
-        const d = `M ${startX} ${startY} C ${startX + dx} ${startY}, ${endX - dx} ${endY}, ${endX} ${endY}`;
+        const control1X = isLeftChild ? startX - dx : startX + dx;
+        const control2X = isLeftChild ? endX + dx : endX - dx;
+        const d = `M ${startX} ${startY} C ${control1X} ${startY}, ${control2X} ${endY}, ${endX} ${endY}`;
 
         list.push({
           id: `edge-${parent.id}-${node.id}`,
@@ -180,12 +183,14 @@ export default function TripCanvas({
 
   // Overall bounds for SVG canvas
   const canvasBounds = useMemo(() => {
-    if (nodes.length === 0) return { width: 1400, height: 900 };
-    const maxX = Math.max(...nodes.map((n) => n.x)) + 500;
-    const maxY = Math.max(...nodes.map((n) => n.y)) + 500;
+    if (nodes.length === 0) return { width: 2000, height: 1200 };
+    const minX = Math.min(0, ...nodes.map((n) => n.x));
+    const maxX = Math.max(...nodes.map((n) => n.x)) + 600;
+    const minY = Math.min(0, ...nodes.map((n) => n.y));
+    const maxY = Math.max(...nodes.map((n) => n.y)) + 600;
     return {
-      width: Math.max(1600, maxX),
-      height: Math.max(1000, maxY),
+      width: Math.max(2600, maxX - minX + 800),
+      height: Math.max(1600, maxY - minY + 800),
     };
   }, [nodes]);
 

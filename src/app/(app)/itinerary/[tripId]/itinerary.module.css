@@ -1,270 +1,932 @@
 .itineraryRoot {
-  min-height: calc(100vh - 56px);
-  background: var(--gt-bg);
-  padding-bottom: var(--gt-space-16);
+  min-height: 100vh;
+  background: var(--gt-bg, #f8fafc);
+  display: flex;
+  flex-direction: column;
 }
 
-.topBar {
-  background: var(--gt-surface);
-  border-bottom: 1px solid var(--gt-border);
-  padding: var(--gt-space-3) var(--gt-space-6);
+/* Top App Bar */
+.topNav {
+  height: 54px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--gt-space-4);
+  padding: 0 20px;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+.topNavLeft {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.backBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #64748b;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.backBtn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.topNavTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.topNavRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.topActionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #334155;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.topActionBtn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+/* 3-Column Planning Workspace: Sidebar + Center Content + Right Map */
+.workspaceLayout {
+  display: flex;
+  flex: 1;
+  height: calc(100vh - 54px);
+  overflow: hidden;
+  position: relative;
+}
+
+/* 1. Left Sidebar */
+.leftSidebar {
+  width: 220px;
+  background: #ffffff;
+  border-right: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 16px 12px;
+  flex-shrink: 0;
+  transition: width 0.2s ease, transform 0.2s ease;
+  z-index: 30;
+}
+
+.leftSidebarCollapsed {
+  width: 54px;
+  padding: 16px 6px;
+}
+
+.sidebarTopSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.aiAssistantBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: none;
+  background: #f95c47;
+  color: #ffffff;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(249, 92, 71, 0.3);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.aiAssistantBtn:hover {
+  background: #e84a35;
+  transform: translateY(-1px);
+}
+
+.sidebarNavList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.sidebarNavItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sidebarNavItem:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.sidebarNavItemActive {
+  background: #f1f5f9;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.sidebarNavIcon {
+  font-size: 12px;
+  color: #94a3b8;
+  width: 12px;
+}
+
+.sidebarNavItemActive .sidebarNavIcon {
+  color: #f95c47;
+}
+
+.sidebarBottomSection {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 12px;
+}
+
+.sidebarFooterBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.sidebarFooterBtn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+/* 2. Center Content Area */
+.centerContentArea {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  background: #fafaf9;
+}
+
+/* Hero Card (Overview & Header) */
+.overviewHeroCard {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  margin-bottom: 24px;
+  position: relative;
+}
+
+.heroImageBanner {
+  height: 180px;
+  width: 100%;
+  object-fit: cover;
+  position: relative;
+}
+
+.heroContentOverlay {
+  padding: 18px 24px;
+}
+
+.heroTripTitle {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 6px;
+}
+
+.heroTripMeta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 13px;
+  color: #64748b;
   flex-wrap: wrap;
 }
 
-.topBarLeft {
+.heroMetaBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Explore Section */
+.exploreSectionTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 12px;
+}
+
+.exploreFilterPills {
   display: flex;
   align-items: center;
-  gap: var(--gt-space-3);
-}
-
-.tripHeading {
-  font-size: var(--gt-text-lg);
-  font-weight: var(--gt-font-bold);
-  color: var(--gt-text-primary);
-}
-
-.tripSub {
-  font-size: var(--gt-text-xs);
-  color: var(--gt-text-secondary);
-}
-
-.topBarRight {
-  display: flex;
-  align-items: center;
-  gap: var(--gt-space-3);
-}
-
-@media (max-width: 768px) {
-  .topBar {
-    padding: var(--gt-space-3);
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .topBarRight {
-    flex-wrap: wrap;
-    gap: var(--gt-space-2);
-  }
-  .topBarRight button,
-  .topBarRight a {
-    flex: 1;
-    min-width: 120px;
-  }
-}
-
-/* Day Navigation */
-.dayNavBar {
-  background: var(--gt-surface);
-  border-bottom: 1px solid var(--gt-border);
-  padding: var(--gt-space-3) var(--gt-space-6);
-  display: flex;
-  gap: var(--gt-space-2);
+  gap: 8px;
+  margin-bottom: 18px;
   overflow-x: auto;
-  scrollbar-width: thin;
+  padding-bottom: 4px;
 }
 
-.dayPill {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 6px 16px;
-  border-radius: var(--gt-radius-lg);
-  border: 1px solid var(--gt-border);
-  background: var(--gt-bg-alt);
+.filterPill {
+  padding: 6px 14px;
+  border-radius: 9999px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #475569;
+  font-size: 12.5px;
+  font-weight: 600;
   cursor: pointer;
+  transition: all 0.15s ease;
   white-space: nowrap;
-  transition: all var(--gt-transition-fast);
 }
 
-.dayPill:hover {
-  border-color: var(--gt-border-hover);
-  background: var(--gt-surface);
+.filterPill:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
 }
 
-.dayPillActive {
-  background: var(--gt-blue);
-  border-color: var(--gt-blue);
+.filterPillActive {
+  background: #0f172a;
   color: #ffffff;
+  border-color: #0f172a;
 }
 
-.dayTitle {
-  font-size: var(--gt-text-xs);
-  font-weight: 700;
-}
-
-.dayDate {
-  font-size: 11px;
-  opacity: 0.85;
-}
-
-/* Main Grid */
-.mainLayout {
+.exploreCardsRow {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--gt-space-6);
-  padding: var(--gt-space-6);
-  max-width: var(--gt-container-xl);
-  margin: 0 auto;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
 }
 
-@media (min-width: 1024px) {
-  .mainLayout {
-    grid-template-columns: 2fr 1fr;
-  }
-}
-
-/* Timeline & Schedule */
-.scheduleCard {
-  background: var(--gt-surface);
-  border: 1px solid var(--gt-border);
-  border-radius: var(--gt-radius-2xl);
-  padding: var(--gt-space-6);
-  box-shadow: var(--gt-shadow-sm);
-}
-
-.scheduleHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--gt-space-6);
-  padding-bottom: var(--gt-space-3);
-  border-bottom: 1px solid var(--gt-border);
-}
-
-.scheduleTitle {
-  font-size: var(--gt-text-xl);
-  font-weight: 700;
-  color: var(--gt-text-primary);
-}
-
-/* Agenda List Items */
-.agendaList {
+.exploreCuratedCard {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   display: flex;
   flex-direction: column;
-  gap: var(--gt-space-3);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.agendaItem {
+.exploreCuratedCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+}
+
+.exploreCuratedCardImg {
+  height: 120px;
+  width: 100%;
+  object-fit: cover;
+}
+
+.exploreCuratedCardBody {
+  padding: 12px 14px;
   display: flex;
-  align-items: flex-start;
-  gap: var(--gt-space-4);
-  padding: var(--gt-space-4);
-  border-radius: var(--gt-radius-xl);
-  border: 1px solid var(--gt-border);
-  background: var(--gt-surface);
-  transition: all var(--gt-transition-fast);
-  cursor: pointer;
-}
-
-.agendaItem:hover {
-  background: var(--gt-bg-alt);
-  border-color: var(--gt-border-hover);
-  transform: translateX(2px);
-}
-
-.timeSlot {
-  font-size: var(--gt-text-sm);
-  font-weight: 700;
-  color: var(--gt-blue);
-  min-width: 64px;
-}
-
-.itemDot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  margin-top: 5px;
-  flex-shrink: 0;
-}
-
-.itemContent {
+  flex-direction: column;
+  gap: 6px;
   flex: 1;
 }
 
-.itemTitle {
-  font-size: var(--gt-text-md);
+.exploreCardTag {
+  display: inline-block;
+  font-size: 11px;
+  color: #ea580c;
   font-weight: 600;
-  color: var(--gt-text-primary);
-  margin-bottom: 2px;
 }
 
-.itemMeta {
-  display: flex;
+.exploreCardTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.3;
+}
+
+.exploreCardBtn {
+  margin-top: auto;
+  align-self: flex-start;
+  display: inline-flex;
   align-items: center;
-  gap: var(--gt-space-3);
-  font-size: var(--gt-text-xs);
-  color: var(--gt-text-secondary);
-}
-
-.itemCost {
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  font-size: 11.5px;
   font-weight: 600;
-  color: var(--gt-teal);
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
-/* Mini Map Preview */
-.miniMapCard {
-  background: var(--gt-surface);
-  border: 1px solid var(--gt-border);
-  border-radius: var(--gt-radius-2xl);
-  padding: var(--gt-space-6);
-  box-shadow: var(--gt-shadow-sm);
+.exploreCardBtn:hover {
+  background: #eff6ff;
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+/* Places List */
+.placesListContainer {
   display: flex;
   flex-direction: column;
-  gap: var(--gt-space-4);
-  position: sticky;
-  top: 76px;
+  gap: 10px;
 }
 
-.miniMapFrame {
-  position: relative;
-  height: 240px;
-  border-radius: var(--gt-radius-xl);
-  overflow: hidden;
-  background-color: #0b1120;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1.5px, transparent 1.5px);
-  background-size: 20px 20px;
+.placeRowItem {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  transition: border-color 0.15s ease;
 }
 
-.miniMapPin {
-  position: absolute;
-  background: var(--gt-blue);
-  color: #fff;
-  border: 2px solid #fff;
-  border-radius: 50%;
-  width: 28px;
-  height: 28px;
+.placeRowItem:hover {
+  border-color: #cbd5e1;
+}
+
+.placeInfo {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 12px;
+}
+
+.placeThumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.placeTitle {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.placeCategory {
+  font-size: 11.5px;
+  color: #64748b;
+}
+
+/* ITINERARY VIEW */
+.itineraryHeaderSearch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-bottom: 20px;
+}
+
+.itinerarySearchInput {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  color: #0f172a;
+}
+
+.daySectionCard {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+.daySectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.daySectionTitle {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.dayHeadingSubtext {
+  font-size: 12px;
+  color: #94a3b8;
+  cursor: pointer;
+}
+
+.lodgingReminderBox {
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.lodgingText {
+  font-size: 12.5px;
+  color: #475569;
+}
+
+.searchHotelsBtn {
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dayActivitiesList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.activityCardRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #f1f5f9;
+  background: #fdfdfd;
+  transition: all 0.15s ease;
+}
+
+.activityCardRow:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.activityCardLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.activityTimeBadge {
   font-size: 11px;
   font-weight: 700;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  color: #64748b;
+  min-width: 55px;
 }
 
-/* Modal */
+.activityCategoryDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.activityCardName {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.activityCardRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.activityActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.iconSmallBtn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iconSmallBtn:hover {
+  color: #0f172a;
+  background: #f1f5f9;
+}
+
+.addPlaceDayBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.addPlaceDayBtn:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+/* Create Mind Map Banner at end of itinerary */
+.createMindMapBanner {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border-radius: 16px;
+  padding: 24px;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 24px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.15);
+}
+
+.createMindMapTitle {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.createMindMapDesc {
+  font-size: 13px;
+  color: #94a3b8;
+  line-height: 1.5;
+}
+
+.createMindMapBtn {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 22px;
+  border-radius: 9999px;
+  border: none;
+  background: #f95c47;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(249, 92, 71, 0.4);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.createMindMapBtn:hover {
+  background: #e84a35;
+  transform: translateY(-1px);
+}
+
+/* Embedded Mind Map Section */
+.embeddedMindMapSection {
+  margin-top: 24px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+}
+
+.embeddedMindMapHeader {
+  padding: 14px 20px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f8fafc;
+}
+
+.embeddedMindMapFrame {
+  height: 480px;
+  position: relative;
+  background: #fdfdfd;
+}
+
+/* BUDGET VIEW */
+.budgetHeaderSection {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 20px;
+}
+
+.budgetingTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+
+.budgetTotalRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.budgetTotalAmount {
+  font-size: 32px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.budgetEditIconBtn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.budgetExpensesHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.expensesTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.sortSelect {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 12px;
+  color: #334155;
+  background: #ffffff;
+  outline: none;
+  cursor: pointer;
+}
+
+.expensesList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.expenseItemRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+
+.expenseItemLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.expenseCategoryIcon {
+  font-size: 18px;
+}
+
+.expenseTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.expenseSubmeta {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.expenseAmount {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.addExpenseMainBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.addExpenseMainBtn:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+/* 3. Right Map Column */
+.rightMapColumn {
+  width: 48%;
+  background: #e2e8f0;
+  position: relative;
+  overflow: hidden;
+  border-left: 1px solid #cbd5e1;
+  flex-shrink: 0;
+}
+
+/* Modal Backdrops & Dialogs (for Add Expense & Select Item) */
 .modalBackdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.6);
+  background: rgba(15, 23, 42, 0.5);
   backdrop-filter: blur(4px);
-  z-index: var(--gt-z-modal);
+  z-index: 100;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--gt-space-4);
+  padding: 16px;
 }
 
-.modalBox {
-  background: var(--gt-surface);
-  border-radius: var(--gt-radius-2xl);
-  padding: var(--gt-space-8);
-  max-width: 480px;
+.modalCard {
+  background: #ffffff;
+  border-radius: 16px;
   width: 100%;
-  box-shadow: var(--gt-shadow-xl);
+  max-width: 420px;
+  padding: 24px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modalTitle {
+  font-size: 17px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.modalCloseBtn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.modalFieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.modalFieldLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.modalSelectTrigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  cursor: pointer;
+  font-size: 13.5px;
+  color: #0f172a;
+}
+
+.categoryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.categoryGridBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #ffffff;
+  font-size: 12px;
+  font-weight: 500;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.categoryGridBtn:hover {
+  background: #eff6ff;
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+.saveExpenseSubmitBtn {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  border: none;
+  background: #f95c47;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* AI Copilot Slideout */
+.aiCopilotDrawer {
+  position: absolute;
+  top: 0;
+  left: 220px;
+  width: 380px;
+  height: 100%;
+  background: #ffffff;
+  border-right: 1px solid #e2e8f0;
+  box-shadow: 6px 0 24px rgba(0, 0, 0, 0.08);
+  z-index: 35;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 1024px) {
+  .rightMapColumn {
+    display: none;
+  }
 }

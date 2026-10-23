@@ -1,8 +1,10 @@
 'use client';
 export const dynamic = 'force-dynamic';
 
-import { useState, useEffect, useMemo, use } from 'react';
+import React, { useState, useEffect, useMemo, use, useCallback } from 'react';
+import dynamicImport from 'next/dynamic';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
   Calendar,
@@ -16,115 +18,162 @@ import {
   CheckCircle2,
   X,
   ExternalLink,
+  ChevronRight,
+  ChevronUp,
+  ChevronDown,
+  Trash2,
+  Edit2,
+  Layers,
+  HelpCircle,
+  Menu,
+  Search,
+  Check,
 } from 'lucide-react';
-import Header from '@/components/layout/Header';
-import Button from '@/components/ui/Button';
-import Badge from '@/components/ui/Badge';
 import ShareModal from '@/components/ui/ShareModal';
-import { tripService, itineraryService } from '@/lib/services';
-import { formatCurrency, formatDateRange } from '@/lib/utils/formatters';
+import { tripService, itineraryService, playgroundService, budgetService } from '@/lib/services';
+import { generateSynchronizedTripPlan, generateMindMapFromItinerary } from '@/lib/services/tripGenerator';
+import { formatCurrency, formatDateRange, formatDate } from '@/lib/utils/formatters';
+import citiesData from '@/lib/data/citiesData.json';
 import styles from './itinerary.module.css';
 
+// Dynamic SSR-safe TripGeoMap
+const TripGeoMap = dynamicImport(() => import('@/components/playground/TripGeoMap'), {
+  ssr: false,
+  loading: () => (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#64748b', fontSize: 13, background: '#f8fafc' }}>
+      Loading Interactive Map...
+    </div>
+  ),
+});
+
+// Dynamic SSR-safe TripCanvas for Embedded Mind Map
+const TripCanvas = dynamicImport(() => import('@/components/playground/TripCanvas'), {
+  ssr: false,
+  loading: () => (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#64748b', fontSize: 13, background: '#f8fafc' }}>
+      Loading Mind Map Playground...
+    </div>
+  ),
+});
+
+// Category color badges
 const CATEGORY_COLORS = {
-  Beach: '#38bdf8',
-  Heritage: '#a855f7',
-  Food: '#f97316',
-  Adventure: '#10b981',
-  Culture: '#6366f1',
-  Transport: '#4169D8',
+  Sightseeing: '#2563eb',
+  Beach: '#0284c7',
+  Heritage: '#7c3aed',
+  Food: '#ea580c',
+  Adventure: '#059669',
+  Culture: '#4f46e5',
+  Transport: '#475569',
+  Stay: '#d97706',
 };
 
-export default function ItineraryPage({ params }) {
+export default function TripPlanningInterface({ params }) {
+  const router = useRouter();
   const unwrappedParams = use(params);
   const tripId = unwrappedParams.tripId;
 
+  // Active View Tab: 'overview' | 'itinerary' | 'budget'
+  const [activeTab, setActiveTab] = useState('overview');
+
+  // Sidebar toggle
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [aiAssistantOpen, setAiAssistantOpen] = useState(false);
+
+  // Core Data
   const [trip, setTrip] = useState(null);
   const [days, setDays] = useState([]);
-  const [selectedDayIndex, setSelectedDayIndex] = useState(0);
+  const [nodes, setNodes] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Modals & UI States
   const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [selectedPlaceForAdd, setSelectedPlaceForAdd] = useState(null);
+  const [exploreFilter, setExploreFilter] = useState('All');
+  const [itinerarySearch, setItinerarySearch] = useState('');
 
-  // Optimize Modal
-  const [showOptimizeModal, setShowOptimizeModal] = useState(false);
-  const [optimizedNotice, setOptimizedNotice] = useState(false);
+  // Mind Map Generated State
+  const [mindMapGenerated, setMindMapGenerated] = useState(false);
+  const [mindMapNodes, setMindMapNodes] = useState([]);
 
-  // Activity Details Modal
-  const [selectedActivity, setSelectedActivity] = useState(null);
+  // Budget State
+  const [expenses, setExpenses] = useState([
+    { id: 'exp-1', title: 'Roundtrip Flights', category: 'Flight', icon: '✈️', amount: 22000, paidBy: 'You', split: "Don't split", date: '2026-10-29' },
+    { id: 'exp-2', title: 'Boutique Stay & Breakfast', category: 'Hotel', icon: '🏨', amount: 15500, paidBy: 'You', split: 'Split equally', date: '2026-10-30' },
+  ]);
+  const [budgetSort, setBudgetSort] = useState('low-to-high');
+  const [isEditingBudget, setIsEditingBudget] = useState(false);
+  const [editedBudgetAmount, setEditedBudgetAmount] = useState(50000);
 
+  // Add Expense & Select Item Modals
+  const [addExpenseModalOpen, setAddExpenseModalOpen] = useState(false);
+  const [selectItemModalOpen, setSelectItemModalOpen] = useState(false);
+  const [newExpense, setNewExpense] = useState({
+    title: '',
+    category: 'Flight',
+    icon: '✈️',
+    amount: '',
+    paidBy: 'You (the globe trotter)',
+    split: "Don't split",
+    date: '',
+  });
+
+  // AI assistant chat state
+  const [chatMessages, setChatMessages] = useState([
+    { role: 'assistant', text: 'Hi! I am your Travel Assistant for this journey. How can I assist you with sights, food, or pacing?' },
+  ]);
+  const [chatInput, setChatInput] = useState('');
+
+  // 1. Initial Load of Trip & Itinerary
   useEffect(() => {
     async function loadData() {
       try {
-        const [loadedTrip, loadedDays] = await Promise.all([
-          tripService.getTripById(tripId),
-          itineraryService.getItinerary(tripId),
-        ]);
-        setTrip(loadedTrip);
+        setLoading(true);
+        let loadedTrip = await tripService.getTripById(tripId);
+        let loadedDays = await itineraryService.getItinerary(tripId);
+        let loadedNodes = await playgroundService.getNodes(tripId);
 
-        // If itinerary days exist use them, otherwise mock a 5-day schedule
-        if (loadedDays && loadedDays.length > 0) {
-          setDays(loadedDays);
-        } else {
-          setDays([
-            {
-              day: 1,
-              date: '2026-11-10',
-              title: 'Arrival & North Goa Coastline',
-              location: 'Calangute, Goa',
-              activities: [
-                { id: 'a1', time: '09:00', name: 'Check-in at Sea Breeze Resort', category: 'Transport', duration: 45, cost: 0, location: 'Calangute' },
-                { id: 'a2', time: '11:00', name: 'Calangute Beach Sunrise & Stroll', category: 'Beach', duration: 90, cost: 0, location: 'Calangute Beach' },
-                { id: 'a3', time: '13:30', name: 'Fresh Seafood Lunch at Britto’s', category: 'Food', duration: 75, cost: 35, location: 'Baga' },
-                { id: 'a4', time: '16:00', name: 'Aguada Fort Sunset Walk', category: 'Heritage', duration: 120, cost: 10, location: 'Sinquerim' },
-              ],
-            },
-            {
-              day: 2,
-              date: '2026-11-11',
-              title: 'Watersports & Anjuna Flea Market',
-              location: 'Anjuna, Goa',
-              activities: [
-                { id: 'a5', time: '10:00', name: 'Parasailing & Jet Skiing', category: 'Adventure', duration: 120, cost: 50, location: 'Baga Beach' },
-                { id: 'a6', time: '14:00', name: 'Anjuna Curated Artisan Market', category: 'Culture', duration: 90, cost: 15, location: 'Anjuna' },
-                { id: 'a7', time: '18:30', name: 'Curries & Live Jazz at Curlies', category: 'Food', duration: 110, cost: 40, location: 'South Anjuna' },
-              ],
-            },
-            {
-              day: 3,
-              date: '2026-11-12',
-              title: 'Old Goa Heritage Churches & Spice Plantation',
-              location: 'Old Goa',
-              activities: [
-                { id: 'a8', time: '09:30', name: 'Basilica of Bom Jesus Guided Tour', category: 'Heritage', duration: 90, cost: 5, location: 'Old Goa' },
-                { id: 'a9', time: '12:00', name: 'Sahakari Spice Farm Lunch Tour', category: 'Culture', duration: 150, cost: 30, location: 'Ponda' },
-                { id: 'a10', time: '16:30', name: 'Mandovi River Sunset Cruise', category: 'Beach', duration: 60, cost: 20, location: 'Panaji Jetty' },
-              ],
-            },
-            {
-              day: 4,
-              date: '2026-11-13',
-              title: 'Latin Quarter of Fontainhas & Panaji',
-              location: 'Panaji',
-              activities: [
-                { id: 'a11', time: '10:00', name: 'Fontainhas Architectural Photo Walk', category: 'Culture', duration: 120, cost: 0, location: 'Fontainhas' },
-                { id: 'a12', time: '13:00', name: 'Traditional Goan Thali at Viva Panjim', category: 'Food', duration: 60, cost: 22, location: 'Altinho' },
-                { id: 'a13', time: '15:30', name: 'Local Pottery & Handcraft Shopping', category: 'Heritage', duration: 90, cost: 40, location: 'Panaji Market' },
-              ],
-            },
-            {
-              day: 5,
-              date: '2026-11-14',
-              title: 'South Goa Palolem Beach & Return',
-              location: 'Palolem',
-              activities: [
-                { id: 'a14', time: '09:00', name: 'Palolem Bay Kayaking to Butterfly Beach', category: 'Adventure', duration: 120, cost: 30, location: 'Palolem' },
-                { id: 'a15', time: '13:00', name: 'Farewell Beachside Lunch', category: 'Food', duration: 90, cost: 35, location: 'Palolem Beach' },
-                { id: 'a16', time: '16:00', name: 'Transfer to Dabolim Airport', category: 'Transport', duration: 90, cost: 25, location: 'Airport' },
-              ],
-            },
-          ]);
+        // Fallback default if new trip
+        if (!loadedTrip) {
+          loadedTrip = {
+            id: tripId,
+            title: 'Trip to Pune',
+            destination: 'Pune',
+            destinations: ['Pune'],
+            startDate: '2026-10-29',
+            endDate: '2026-11-03',
+            budget: 50000,
+            currency: 'INR',
+            travelers: 2,
+            coverImage: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&fit=crop',
+          };
         }
+
+        // If itinerary days missing, auto-generate synchronized plan
+        if (!loadedDays || loadedDays.length === 0) {
+          const dest = loadedTrip.destinations?.[0] || loadedTrip.destination || 'Pune';
+          const plan = generateSynchronizedTripPlan({
+            tripId,
+            startLocation: `${dest}, India`,
+            destinations: [dest],
+            budget: loadedTrip.budget || 50000,
+            currency: loadedTrip.currency || 'INR',
+            startDate: loadedTrip.startDate || '2026-10-29',
+            endDate: loadedTrip.endDate || '2026-11-03',
+            travelers: loadedTrip.travelers || 2,
+          });
+          loadedDays = plan.itineraryDays;
+          loadedNodes = plan.nodes;
+          itineraryService.saveItinerary(tripId, loadedDays);
+          playgroundService.saveNodes(tripId, loadedNodes);
+        }
+
+        setTrip(loadedTrip);
+        setDays(loadedDays);
+        setNodes(loadedNodes || []);
+        setEditedBudgetAmount(loadedTrip.budget || 50000);
       } catch (err) {
-        console.error('Failed to load itinerary', err);
+        console.error('Failed to load trip planning data', err);
       } finally {
         setLoading(false);
       }
@@ -132,285 +181,993 @@ export default function ItineraryPage({ params }) {
     loadData();
   }, [tripId]);
 
-  const activeDay = days[selectedDayIndex] || days[0];
+  // Destination info from dataset
+  const currentCityInfo = useMemo(() => {
+    const dest = trip?.destinations?.[0] || trip?.destination || 'Pune';
+    return (
+      citiesData.find((c) => c.name.toLowerCase() === dest.toLowerCase()) || {
+        name: dest,
+        country: 'India',
+        image: trip?.coverImage || 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&fit=crop',
+        description: 'Vibrant cultural destination featuring rich heritage, historic sights, and local dining.',
+        coordinates: { lat: 18.5204, lng: 73.8567 },
+        destinations: [
+          { name: 'Historic Shaniwar Wada', category: 'Heritage', price: 100 },
+          { name: 'Aga Khan Palace & Memorial', category: 'Culture', price: 150 },
+          { name: 'Sinhagad Fort Mountain Vista', category: 'Adventure', price: 200 },
+        ],
+        food: [
+          { name: 'Authentic Maharashtrian Thali', category: 'Food', price: 450 },
+          { name: 'Heritage Bakery & Chai Tasting', category: 'Food', price: 200 },
+        ],
+        stays: [
+          { name: 'Heritage Boutique Stay', category: 'Stay', price: 3500 },
+        ],
+      }
+    );
+  }, [trip]);
 
-  const handleOptimizeConfirm = () => {
-    setShowOptimizeModal(false);
-    setOptimizedNotice(true);
-    setTimeout(() => setOptimizedNotice(false), 4000);
+  // Synchronize map nodes with current day-wise itinerary changes
+  const synchronizedMapNodes = useMemo(() => {
+    if (!days || days.length === 0) return nodes;
+
+    const mapNodes = [];
+    const dest = trip?.destinations?.[0] || trip?.destination || 'Pune';
+    const cityCoords = currentCityInfo?.coordinates || { lat: 18.5204, lng: 73.8567 };
+
+    // City root node
+    mapNodes.push({
+      id: `node-city-${tripId}`,
+      type: 'city',
+      title: dest,
+      category: 'Sightseeing',
+      dayNumber: 1,
+      order: 0,
+      coordinates: cityCoords,
+    });
+
+    // Activities as map pins
+    days.forEach((dayItem, dIdx) => {
+      (dayItem.activities || []).forEach((act, aIdx) => {
+        // Deterministic offset around city center for accurate visual clustering
+        const angle = (dIdx * 60 + aIdx * 45) * (Math.PI / 180);
+        const radius = 0.02 + (aIdx * 0.012);
+        const lat = cityCoords.lat + Math.sin(angle) * radius;
+        const lng = cityCoords.lng + Math.cos(angle) * radius;
+
+        mapNodes.push({
+          id: act.id || `node-act-${dayItem.day}-${aIdx}`,
+          type: act.category === 'Food' ? 'food' : 'destination',
+          title: act.name,
+          category: act.category || 'Sightseeing',
+          dayNumber: dayItem.day,
+          order: aIdx + 1,
+          time: act.time || '10:00 AM',
+          estimatedCost: act.cost || 0,
+          coordinates: { lat, lng },
+        });
+      });
+    });
+
+    return mapNodes;
+  }, [days, nodes, trip, currentCityInfo, tripId]);
+
+  // ADD PLACE TO SPECIFIC DAY
+  const handleAddPlaceToDay = (place, targetDayNum = 1) => {
+    const newAct = {
+      id: `act-${Date.now()}`,
+      time: '02:00 PM',
+      name: place.name || 'New Selected Spot',
+      category: place.category || 'Sightseeing',
+      duration: 90,
+      cost: place.price || 300,
+      location: currentCityInfo.name,
+      image: place.image || currentCityInfo.image,
+    };
+
+    const updated = days.map((d) => {
+      if (d.day === targetDayNum) {
+        return {
+          ...d,
+          activities: [...(d.activities || []), newAct],
+        };
+      }
+      return d;
+    });
+
+    setDays(updated);
+    itineraryService.saveItinerary(tripId, updated);
+  };
+
+  // REMOVE ACTIVITY
+  const handleRemoveActivity = (dayNum, actId) => {
+    const updated = days.map((d) => {
+      if (d.day === dayNum) {
+        return {
+          ...d,
+          activities: (d.activities || []).filter((a) => a.id !== actId),
+        };
+      }
+      return d;
+    });
+    setDays(updated);
+    itineraryService.saveItinerary(tripId, updated);
+  };
+
+  // REORDER ACTIVITIES (Up / Down)
+  const handleMoveActivity = (dayNum, actIndex, direction) => {
+    const updated = days.map((d) => {
+      if (d.day === dayNum) {
+        const acts = [...(d.activities || [])];
+        const targetIndex = actIndex + direction;
+        if (targetIndex >= 0 && targetIndex < acts.length) {
+          const temp = acts[actIndex];
+          acts[actIndex] = acts[targetIndex];
+          acts[targetIndex] = temp;
+        }
+        return { ...d, activities: acts };
+      }
+      return d;
+    });
+    setDays(updated);
+    itineraryService.saveItinerary(tripId, updated);
+  };
+
+  // CREATE MIND MAP TRIGGER
+  const handleCreateMindMap = () => {
+    const generated = generateMindMapFromItinerary(trip, days);
+    setMindMapNodes(generated);
+    setMindMapGenerated(true);
+    playgroundService.saveNodes(tripId, generated);
+  };
+
+  // SAVE EDITED BUDGET
+  const handleSaveBudget = () => {
+    setIsEditingBudget(false);
+    if (trip) {
+      tripService.update(tripId, { budget: Number(editedBudgetAmount) });
+      setTrip({ ...trip, budget: Number(editedBudgetAmount) });
+    }
+  };
+
+  // ADD EXPENSE
+  const handleSaveNewExpense = (e) => {
+    if (e) e.preventDefault();
+    if (!newExpense.title || !newExpense.amount) return;
+
+    const expenseItem = {
+      id: `exp-${Date.now()}`,
+      title: newExpense.title,
+      category: newExpense.category,
+      icon: newExpense.icon,
+      amount: Number(newExpense.amount),
+      paidBy: newExpense.paidBy,
+      split: newExpense.split,
+      date: newExpense.date || trip?.startDate || '2026-10-29',
+    };
+
+    setExpenses([expenseItem, ...expenses]);
+    setAddExpenseModalOpen(false);
+    setNewExpense({
+      title: '',
+      category: 'Flight',
+      icon: '✈️',
+      amount: '',
+      paidBy: 'You (the globe trotter)',
+      split: "Don't split",
+      date: '',
+    });
+  };
+
+  // DELETE EXPENSE
+  const handleDeleteExpense = (expId) => {
+    setExpenses(expenses.filter((e) => e.id !== expId));
+  };
+
+  // Sorted Expenses
+  const sortedExpenses = useMemo(() => {
+    const list = [...expenses];
+    if (budgetSort === 'low-to-high') {
+      list.sort((a, b) => a.amount - b.amount);
+    } else {
+      list.sort((a, b) => b.amount - a.amount);
+    }
+    return list;
+  }, [expenses, budgetSort]);
+
+  // Total Expenses sum
+  const totalExpensesSum = useMemo(() => {
+    return expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+  }, [expenses]);
+
+  // AI Assistant Chat Send
+  const handleSendChat = (e) => {
+    if (e) e.preventDefault();
+    if (!chatInput.trim()) return;
+
+    const userText = chatInput.trim();
+    setChatMessages((prev) => [...prev, { role: 'user', text: userText }]);
+    setChatInput('');
+
+    // Contextual intelligent response
+    setTimeout(() => {
+      let reply = `For your trip to ${trip?.destinations?.[0] || 'Pune'}, I recommend pacing your activities between 09:30 AM and 04:30 PM. Would you like me to optimize transit routes or add local food stops?`;
+      if (userText.toLowerCase().includes('food') || userText.toLowerCase().includes('eat')) {
+        reply = `Top dining recommendation: Try local authentic specialties and popular bakeries in ${trip?.destinations?.[0] || 'Pune'}. You can add them with one click from the Overview tab!`;
+      } else if (userText.toLowerCase().includes('map') || userText.toLowerCase().includes('mind map')) {
+        reply = `Your mind map visually branches each day and its stops directly from your itinerary. Click 'Create Mind Map' in the Itinerary tab to generate it!`;
+      }
+      setChatMessages((prev) => [...prev, { role: 'assistant', text: reply }]);
+    }, 600);
   };
 
   if (loading || !trip) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--gt-bg)' }}>
-        <p style={{ color: 'var(--gt-text-secondary)' }}>Loading daily itinerary...</p>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#f8fafc' }}>
+        <p style={{ color: '#64748b', fontSize: 15, fontWeight: 600 }}>Loading travel workspace...</p>
       </div>
     );
   }
 
-  const activeDayCost = activeDay?.activities?.reduce((acc, a) => acc + (a.cost || 0), 0) || 0;
+  const destinationName = trip.destinations?.[0] || trip.destination || 'Pune';
 
   return (
     <div className={styles.itineraryRoot}>
-      <Header
-        breadcrumbs={[
-          { label: 'Home', href: '/dashboard' },
-          { label: 'My Trips', href: '/trips' },
-          { label: trip.title, href: `/playground/${trip.id}` },
-          { label: 'Itinerary' },
-        ]}
-      />
+      {/* Top Application Bar */}
+      <header className={styles.topNav}>
+        <div className={styles.topNavLeft}>
+          <Link href="/trips" className={styles.backBtn}>
+            <ArrowLeft size={16} />
+            <span>My Trips</span>
+          </Link>
+          <div className={styles.topNavTitle}>{trip.title}</div>
+        </div>
 
-      {/* Top Bar */}
-      <div className={styles.topBar}>
-        <div className={styles.topBarLeft}>
+        <div className={styles.topNavRight}>
           <Link href={`/playground/${trip.id}`} style={{ textDecoration: 'none' }}>
-            <Button variant="ghost" size="sm">
-              <ArrowLeft size={16} />
-              <span>Canvas</span>
-            </Button>
-          </Link>
-          <div>
-            <div className={styles.tripHeading}>{trip.title} — Day Timeline</div>
-            <div className={styles.tripSub}>
-              {formatDateRange(trip.startDate, trip.endDate)} • {days.length} Total Days Scheduled
-            </div>
-          </div>
-        </div>
-
-        <div className={styles.topBarRight}>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setShowOptimizeModal(true)}
-          >
-            <Sparkles size={14} color="var(--gt-blue)" />
-            <span>AI Optimize Route</span>
-          </Button>
-
-          <Link href={`/budget/${trip.id}`} style={{ textDecoration: 'none' }}>
-            <Button variant="outline" size="sm">
-              <DollarSign size={14} />
-              <span>Budget Breakdown</span>
-            </Button>
-          </Link>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShareModalOpen(true)}
-          >
-            <Share2 size={14} />
-            <span>Share Itinerary</span>
-          </Button>
-        </div>
-      </div>
-
-      {optimizedNotice && (
-        <div
-          style={{
-            background: 'var(--gt-success-bg)',
-            color: 'var(--gt-success)',
-            padding: '10px 20px',
-            textAlign: 'center',
-            fontSize: '13px',
-            fontWeight: 600,
-            borderBottom: '1px solid rgba(22, 163, 74, 0.2)',
-          }}
-        >
-          ✨ Route & Activity order optimized for minimum travel duration! (Demo simulation)
-        </div>
-      )}
-
-      {/* Day Navigation Bar */}
-      <div className={styles.dayNavBar}>
-        {days.map((d, index) => {
-          const isActive = selectedDayIndex === index;
-          return (
-            <button
-              key={d.day}
-              className={`${styles.dayPill} ${isActive ? styles.dayPillActive : ''}`}
-              onClick={() => setSelectedDayIndex(index)}
-            >
-              <span className={styles.dayTitle}>Day {d.day}</span>
-              <span className={styles.dayDate}>{d.date}</span>
+            <button type="button" className={styles.topActionBtn}>
+              <Layers size={14} color="#2563eb" />
+              <span>Trip Canvas</span>
             </button>
-          );
-        })}
-      </div>
+          </Link>
 
-      {/* Main Grid: Schedule (65%) & Day Mini-Map (35%) */}
-      <div className={styles.mainLayout}>
-        {/* Left Column: Day Schedule */}
-        <div className={styles.scheduleCard}>
-          <div className={styles.scheduleHeader}>
-            <div>
-              <h2 className={styles.scheduleTitle}>
-                Day {activeDay?.day}: {activeDay?.title}
-              </h2>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '12px', color: 'var(--gt-text-muted)', marginTop: 4 }}>
-                <MapPin size={13} />
-                <span>{activeDay?.location}</span>
-                <span>•</span>
-                <span>Est. Day Spend: {formatCurrency(activeDayCost)}</span>
-              </div>
-            </div>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                const newAct = {
-                  id: `act-new-${Date.now()}`,
-                  time: '19:00',
-                  name: 'Evening Seaside Stroll',
-                  category: 'Beach',
-                  duration: 60,
-                  cost: 0,
-                  location: activeDay?.location || 'Goa',
-                };
-                const updated = [...days];
-                updated[selectedDayIndex].activities.push(newAct);
-                setDays(updated);
-              }}
-            >
-              <Plus size={14} />
-              <span>Add Activity</span>
-            </Button>
-          </div>
-
-          {/* Agenda Activity List */}
-          <div className={styles.agendaList}>
-            {activeDay?.activities?.map((activity) => (
-              <div
-                key={activity.id}
-                className={styles.agendaItem}
-                onClick={() => setSelectedActivity(activity)}
-              >
-                <div className={styles.timeSlot}>{activity.time}</div>
-                <div
-                  className={styles.itemDot}
-                  style={{ backgroundColor: CATEGORY_COLORS[activity.category] || 'var(--gt-blue)' }}
-                />
-                <div className={styles.itemContent}>
-                  <div className={styles.itemTitle}>{activity.name}</div>
-                  <div className={styles.itemMeta}>
-                    <span>{activity.location}</span>
-                    <span>•</span>
-                    <span>{activity.duration} mins</span>
-                    <span>•</span>
-                    <Badge size="sm" color="blue">{activity.category}</Badge>
-                  </div>
-                </div>
-                <div className={styles.itemCost}>
-                  {activity.cost > 0 ? formatCurrency(activity.cost) : 'Free'}
-                </div>
-              </div>
-            ))}
-          </div>
+          <button type="button" className={styles.topActionBtn} onClick={() => setShareModalOpen(true)}>
+            <Share2 size={14} />
+            <span>Share</span>
+          </button>
         </div>
+      </header>
 
-        {/* Right Column: Mini Map & Day Stats */}
-        <aside className={styles.miniMapCard}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontWeight: 700, fontSize: '14px', color: 'var(--gt-text-primary)' }}>
-              Geographic Route
-            </span>
-            <span style={{ fontSize: '11px', color: 'var(--gt-text-muted)' }}>
-              {activeDay?.activities?.length || 0} stops today
-            </span>
+      {/* 3-Column Planning Workspace */}
+      <div className={styles.workspaceLayout}>
+        {/* 1. Left Sidebar Navigation */}
+        <aside className={`${styles.leftSidebar} ${sidebarCollapsed ? styles.leftSidebarCollapsed : ''}`}>
+          <div className={styles.sidebarTopSection}>
+            {/* AI Assistant Button */}
+            <button
+              type="button"
+              className={styles.aiAssistantBtn}
+              onClick={() => setAiAssistantOpen((prev) => !prev)}
+              title="Open AI Travel Assistant"
+            >
+              <Sparkles size={16} />
+              {!sidebarCollapsed && <span>AI Assistant</span>}
+            </button>
+
+            {/* Sidebar Navigation Items */}
+            <nav className={styles.sidebarNavList}>
+              <button
+                type="button"
+                className={`${styles.sidebarNavItem} ${activeTab === 'overview' ? styles.sidebarNavItemActive : ''}`}
+                onClick={() => setActiveTab('overview')}
+              >
+                <span className={styles.sidebarNavIcon}>&gt;</span>
+                {!sidebarCollapsed && <span>Overview</span>}
+              </button>
+
+              <button
+                type="button"
+                className={`${styles.sidebarNavItem} ${activeTab === 'itinerary' ? styles.sidebarNavItemActive : ''}`}
+                onClick={() => setActiveTab('itinerary')}
+              >
+                <span className={styles.sidebarNavIcon}>&gt;</span>
+                {!sidebarCollapsed && <span>Itinerary</span>}
+              </button>
+
+              <button
+                type="button"
+                className={`${styles.sidebarNavItem} ${activeTab === 'budget' ? styles.sidebarNavItemActive : ''}`}
+                onClick={() => setActiveTab('budget')}
+              >
+                <span className={styles.sidebarNavIcon}>&gt;</span>
+                {!sidebarCollapsed && <span>Budget</span>}
+              </button>
+            </nav>
           </div>
 
-          <div className={styles.miniMapFrame}>
-            <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
-              <path
-                d="M 60 160 Q 140 60, 240 120 T 320 180"
-                fill="none"
-                stroke="var(--gt-blue)"
-                strokeWidth="3"
-                strokeDasharray="6 4"
-              />
-            </svg>
+          <div className={styles.sidebarBottomSection}>
+            <button
+              type="button"
+              className={styles.sidebarFooterBtn}
+              onClick={() => alert('GlobeTrotter Support: Reach out at support@globetrotter.travel for assistance.')}
+            >
+              <HelpCircle size={14} />
+              {!sidebarCollapsed && <span>Support</span>}
+            </button>
 
-            <div className={styles.miniMapPin} style={{ left: '20%', top: '65%' }}>1</div>
-            <div className={styles.miniMapPin} style={{ left: '45%', top: '25%' }}>2</div>
-            <div className={styles.miniMapPin} style={{ left: '70%', top: '48%' }}>3</div>
-          </div>
-
-          <div style={{ background: 'var(--gt-bg-alt)', borderRadius: 'var(--gt-radius-lg)', padding: 'var(--gt-space-4)' }}>
-            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--gt-text-primary)', marginBottom: 4 }}>
-              💡 Smart Transit Advisory
-            </div>
-            <p style={{ fontSize: '11px', color: 'var(--gt-text-secondary)', lineHeight: 1.5 }}>
-              Average transit between activities is under 20 minutes by local scooter or taxi. Start early to avoid peak noon temperatures!
-            </p>
+            <button
+              type="button"
+              className={styles.sidebarFooterBtn}
+              onClick={() => setSidebarCollapsed((prev) => !prev)}
+            >
+              <Menu size={14} />
+              {!sidebarCollapsed && <span>Hide sidebar</span>}
+            </button>
           </div>
         </aside>
-      </div>
 
-      {/* Optimize Modal */}
-      {showOptimizeModal && (
-        <div className={styles.modalBackdrop}>
-          <div className={styles.modalBox}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--gt-blue)', marginBottom: 12 }}>
-              <Sparkles size={24} />
-              <h3 style={{ fontSize: 18, fontWeight: 700 }}>AI Itinerary Optimization</h3>
-            </div>
-            <p style={{ fontSize: 14, color: 'var(--gt-text-secondary)', lineHeight: 1.5, marginBottom: 20 }}>
-              Our AI engine will analyze geographic locations and open hours to sequence your activities for minimum travel time and optimal pacing.
-            </p>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-              <Button variant="outline" size="md" onClick={() => setShowOptimizeModal(false)}>
-                Cancel
-              </Button>
-              <Button variant="primary" size="md" onClick={handleOptimizeConfirm}>
-                Run Optimization
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Activity Details Modal */}
-      {selectedActivity && (
-        <div className={styles.modalBackdrop}>
-          <div className={styles.modalBox}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-              <div>
-                <h3 style={{ fontSize: 18, fontWeight: 700 }}>{selectedActivity.name}</h3>
-                <span style={{ fontSize: 12, color: 'var(--gt-text-muted)' }}>{selectedActivity.location}</span>
+        {/* AI Assistant Slideout Drawer */}
+        {aiAssistantOpen && (
+          <div className={styles.aiCopilotDrawer}>
+            <div style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8fafc' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 14, color: '#0f172a' }}>
+                <Sparkles size={16} color="#f95c47" />
+                <span>AI Travel Assistant</span>
               </div>
               <button
-                onClick={() => setSelectedActivity(null)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gt-text-muted)' }}
+                type="button"
+                onClick={() => setAiAssistantOpen(false)}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748b' }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div style={{ flex: 1, overflowY: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {chatMessages.map((msg, i) => (
+                <div
+                  key={i}
+                  style={{
+                    alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                    background: msg.role === 'user' ? '#2563eb' : '#f1f5f9',
+                    color: msg.role === 'user' ? '#ffffff' : '#0f172a',
+                    padding: '10px 14px',
+                    borderRadius: 12,
+                    fontSize: 13,
+                    maxWidth: '85%',
+                    lineHeight: 1.45,
+                  }}
+                >
+                  {msg.text}
+                </div>
+              ))}
+            </div>
+
+            <form onSubmit={handleSendChat} style={{ padding: 12, borderTop: '1px solid #e2e8f0', display: 'flex', gap: 8 }}>
+              <input
+                type="text"
+                placeholder="Ask advice, route questions..."
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                style={{ flex: 1, padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 13, outline: 'none' }}
+              />
+              <button
+                type="submit"
+                style={{ background: '#f95c47', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+              >
+                Send
+              </button>
+            </form>
+          </div>
+        )}
+
+        {/* 2. Center Content Column */}
+        <main className={styles.centerContentArea}>
+          {/* OVERVIEW TAB */}
+          {activeTab === 'overview' && (
+            <div>
+              {/* Trip Hero Banner Card */}
+              <div className={styles.overviewHeroCard}>
+                <img
+                  src={currentCityInfo.image}
+                  alt={trip.title}
+                  className={styles.heroImageBanner}
+                />
+                <div className={styles.heroContentOverlay}>
+                  <h1 className={styles.heroTripTitle}>{trip.title}</h1>
+                  <div className={styles.heroTripMeta}>
+                    <span className={styles.heroMetaBadge}>
+                      <Calendar size={14} color="#f95c47" />
+                      <span>{formatDateRange(trip.startDate, trip.endDate)}</span>
+                    </span>
+                    <span>•</span>
+                    <span className={styles.heroMetaBadge}>
+                      <Clock size={14} color="#2563eb" />
+                      <span>{days.length} days planned</span>
+                    </span>
+                    <span>•</span>
+                    <span className={styles.heroMetaBadge}>
+                      <DollarSign size={14} color="#059669" />
+                      <span>Budget: {formatCurrency(trip.budget)}</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Explore Section */}
+              <h2 className={styles.exploreSectionTitle}>Explore</h2>
+
+              {/* Filter category pills */}
+              <div className={styles.exploreFilterPills}>
+                {['All', 'Attractions', 'Food', 'Hotels'].map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    className={`${styles.filterPill} ${exploreFilter === cat ? styles.filterPillActive : ''}`}
+                    onClick={() => setExploreFilter(cat)}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+
+              {/* 3 Highlighted Cards matching PDF Page 1 */}
+              <div className={styles.exploreCardsRow}>
+                {/* 1. Best attractions */}
+                <div className={styles.exploreCuratedCard}>
+                  <img
+                    src="https://images.unsplash.com/photo-1590050752117-238cb0fb12b1?w=500&fit=crop"
+                    alt="Best attractions"
+                    className={styles.exploreCuratedCardImg}
+                  />
+                  <div className={styles.exploreCuratedCardBody}>
+                    <span className={styles.exploreCardTag}>Most often seen on the web</span>
+                    <div className={styles.exploreCardTitle}>Best attractions in {destinationName}</div>
+                    <button
+                      type="button"
+                      className={styles.exploreCardBtn}
+                      onClick={() => handleAddPlaceToDay({ name: `Iconic Landmark in ${destinationName}`, category: 'Heritage', price: 200 }, 1)}
+                    >
+                      <Plus size={13} />
+                      <span>Add to Day 1</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 2. Best restaurants */}
+                <div className={styles.exploreCuratedCard}>
+                  <img
+                    src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=500&fit=crop"
+                    alt="Best restaurants"
+                    className={styles.exploreCuratedCardImg}
+                  />
+                  <div className={styles.exploreCuratedCardBody}>
+                    <span className={styles.exploreCardTag}>Most often seen on the web</span>
+                    <div className={styles.exploreCardTitle}>Best restaurants in {destinationName}</div>
+                    <button
+                      type="button"
+                      className={styles.exploreCardBtn}
+                      onClick={() => handleAddPlaceToDay({ name: `Traditional Regional Kitchen`, category: 'Food', price: 500 }, 1)}
+                    >
+                      <Plus size={13} />
+                      <span>Add to Day 1</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 3. Search hotels */}
+                <div className={styles.exploreCuratedCard}>
+                  <img
+                    src="https://images.unsplash.com/photo-1566073771259-6a8506099945?w=500&fit=crop"
+                    alt="Search hotels"
+                    className={styles.exploreCuratedCardImg}
+                  />
+                  <div className={styles.exploreCuratedCardBody}>
+                    <span className={styles.exploreCardTag}>Hotels & Stays</span>
+                    <div className={styles.exploreCardTitle}>Search hotels with transparent pricing</div>
+                    <button
+                      type="button"
+                      className={styles.exploreCardBtn}
+                      onClick={() => handleAddPlaceToDay({ name: `${destinationName} Heritage Boutique Resort`, category: 'Stay', price: 3200 }, 1)}
+                    >
+                      <Plus size={13} />
+                      <span>Add Lodging</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Famous Places & Spots in Destination */}
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', marginBottom: 12 }}>
+                Popular Places & Experiences in {destinationName}
+              </h3>
+              <div className={styles.placesListContainer}>
+                {(currentCityInfo.destinations || []).slice(0, 4).map((p, idx) => (
+                  <div key={idx} className={styles.placeRowItem}>
+                    <div className={styles.placeInfo}>
+                      <img
+                        src={p.image || currentCityInfo.image}
+                        alt={p.name}
+                        className={styles.placeThumb}
+                      />
+                      <div>
+                        <div className={styles.placeTitle}>{p.name}</div>
+                        <div className={styles.placeCategory}>{p.category} • Est. {formatCurrency(p.price || 200)}</div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className={styles.exploreCardBtn}
+                      onClick={() => handleAddPlaceToDay(p, 1)}
+                    >
+                      <Plus size={13} />
+                      <span>Add to Itinerary</span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ITINERARY TAB */}
+          {activeTab === 'itinerary' && (
+            <div>
+              {/* Add a place search bar */}
+              <div className={styles.itineraryHeaderSearch}>
+                <Plus size={16} color="#64748b" />
+                <input
+                  type="text"
+                  placeholder="+ Add a place to itinerary..."
+                  value={itinerarySearch}
+                  onChange={(e) => setItinerarySearch(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && itinerarySearch.trim()) {
+                      handleAddPlaceToDay({ name: itinerarySearch.trim(), category: 'Sightseeing', price: 200 }, 1);
+                      setItinerarySearch('');
+                    }
+                  }}
+                  className={styles.itinerarySearchInput}
+                />
+              </div>
+
+              {/* Day-by-Day Sections matching actual travel dates */}
+              {days.map((dayItem, dIdx) => (
+                <div key={dayItem.day} className={styles.daySectionCard}>
+                  {/* Day Header */}
+                  <div className={styles.daySectionHeader}>
+                    <div>
+                      <h3 className={styles.daySectionTitle}>
+                        {formatDate(dayItem.date, 'EEEE, MMMM do')}
+                      </h3>
+                      <div className={styles.dayHeadingSubtext}>
+                        {dayItem.title || 'Add a heading'}
+                      </div>
+                    </div>
+
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#64748b', background: '#f1f5f9', padding: '4px 8px', borderRadius: 6 }}>
+                      Day {dayItem.day}
+                    </span>
+                  </div>
+
+                  {/* Lodging Reminder Card */}
+                  <div className={styles.lodgingReminderBox}>
+                    <span className={styles.lodgingText}>
+                      Looks like you don't have lodging for {formatDate(dayItem.date, 'MMM d')}
+                    </span>
+                    <button
+                      type="button"
+                      className={styles.searchHotelsBtn}
+                      onClick={() => handleAddPlaceToDay({ name: `Stay at ${destinationName} Center`, category: 'Stay', price: 2800 }, dayItem.day)}
+                    >
+                      Search hotels
+                    </button>
+                  </div>
+
+                  {/* Activities List */}
+                  <div className={styles.dayActivitiesList}>
+                    {(dayItem.activities || []).map((act, actIdx) => (
+                      <div key={act.id || actIdx} className={styles.activityCardRow}>
+                        <div className={styles.activityCardLeft}>
+                          <span className={styles.activityTimeBadge}>{act.time || '10:00 AM'}</span>
+                          <span
+                            className={styles.activityCategoryDot}
+                            style={{ backgroundColor: CATEGORY_COLORS[act.category] || '#2563eb' }}
+                          />
+                          <span className={styles.activityCardName}>{act.name}</span>
+                        </div>
+
+                        <div className={styles.activityCardRight}>
+                          <span style={{ fontSize: 12, color: '#64748b' }}>
+                            {act.cost > 0 ? formatCurrency(act.cost) : 'Free'}
+                          </span>
+
+                          <div className={styles.activityActions}>
+                            <button
+                              type="button"
+                              className={styles.iconSmallBtn}
+                              title="Move earlier"
+                              onClick={() => handleMoveActivity(dayItem.day, actIdx, -1)}
+                            >
+                              <ChevronUp size={15} />
+                            </button>
+                            <button
+                              type="button"
+                              className={styles.iconSmallBtn}
+                              title="Move later"
+                              onClick={() => handleMoveActivity(dayItem.day, actIdx, 1)}
+                            >
+                              <ChevronDown size={15} />
+                            </button>
+                            <button
+                              type="button"
+                              className={styles.iconSmallBtn}
+                              title="Remove stop"
+                              onClick={() => handleRemoveActivity(dayItem.day, act.id)}
+                            >
+                              <Trash2 size={14} color="#ef4444" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* + Add a place button for this specific day */}
+                  <button
+                    type="button"
+                    className={styles.addPlaceDayBtn}
+                    onClick={() => handleAddPlaceToDay({ name: `New Activity for Day ${dayItem.day}`, category: 'Sightseeing', price: 250 }, dayItem.day)}
+                  >
+                    <Plus size={14} />
+                    <span>Add a place</span>
+                  </button>
+                </div>
+              ))}
+
+              {/* CREATE MIND MAP BUTTON at end of all dates */}
+              <div className={styles.createMindMapBanner}>
+                <div>
+                  <div className={styles.createMindMapTitle}>Generate Visual Mind Map</div>
+                  <div className={styles.createMindMapDesc}>
+                    Organize all {days.length} days, locations, and scheduled activities into an interactive visual mind map with branching nodes.
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  className={styles.createMindMapBtn}
+                  onClick={handleCreateMindMap}
+                >
+                  <Layers size={16} />
+                  <span>Create Mind Map</span>
+                </button>
+              </div>
+
+              {/* Embedded Mind Map Section (Displayed below Itinerary) */}
+              {mindMapGenerated && (
+                <div className={styles.embeddedMindMapSection}>
+                  <div className={styles.embeddedMindMapHeader}>
+                    <div style={{ fontWeight: 700, fontSize: 15, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Layers size={16} color="#f95c47" />
+                      <span>Generated Mind Map Canvas</span>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <Link href={`/playground/${trip.id}`} style={{ textDecoration: 'none' }}>
+                        <button type="button" className={styles.topActionBtn}>
+                          <ExternalLink size={13} />
+                          <span>Open Full Playground</span>
+                        </button>
+                      </Link>
+                      <button type="button" className={styles.topActionBtn} onClick={() => setShareModalOpen(true)}>
+                        <Share2 size={13} />
+                        <span>Share Mind Map</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className={styles.embeddedMindMapFrame}>
+                    <TripCanvas
+                      nodes={mindMapNodes}
+                      selectedNodeId={null}
+                      onSelectNode={() => {}}
+                      onUpdateNodeCoordinates={() => {}}
+                      onOpenAddModal={() => {}}
+                      onOpenReplaceModal={() => {}}
+                      onDuplicateNode={() => {}}
+                      onDeleteNode={() => {}}
+                      onAddChildNode={() => {}}
+                      onAutoLayout={() => {}}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* BUDGET TAB */}
+          {activeTab === 'budget' && (
+            <div>
+              {/* Budget Total Card */}
+              <div className={styles.budgetHeaderSection}>
+                <div className={styles.budgetingTitle}>Budgeting</div>
+                <div className={styles.budgetTotalRow}>
+                  {!isEditingBudget ? (
+                    <>
+                      <div className={styles.budgetTotalAmount}>
+                        {formatCurrency(trip.budget || 50000)}
+                      </div>
+                      <button
+                        type="button"
+                        className={styles.budgetEditIconBtn}
+                        onClick={() => setIsEditingBudget(true)}
+                        title="Edit Target Budget"
+                      >
+                        <Edit2 size={18} />
+                      </button>
+                    </>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <input
+                        type="number"
+                        value={editedBudgetAmount}
+                        onChange={(e) => setEditedBudgetAmount(e.target.value)}
+                        style={{ fontSize: 24, fontWeight: 700, padding: '4px 10px', borderRadius: 8, border: '1px solid #2563eb', width: 160 }}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleSaveBudget}
+                        style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 14px', fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        Save
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ fontSize: 13, color: '#64748b' }}>
+                  Total Expenses Logged: <strong style={{ color: '#0f172a' }}>{formatCurrency(totalExpensesSum)}</strong> • Remaining: <strong style={{ color: (trip.budget - totalExpensesSum) >= 0 ? '#16a34a' : '#dc2626' }}>{formatCurrency((trip.budget || 50000) - totalExpensesSum)}</strong>
+                </div>
+              </div>
+
+              {/* Expenses List Header */}
+              <div className={styles.budgetExpensesHeader}>
+                <h3 className={styles.expensesTitle}>Expenses</h3>
+                <select
+                  className={styles.sortSelect}
+                  value={budgetSort}
+                  onChange={(e) => setBudgetSort(e.target.value)}
+                >
+                  <option value="low-to-high">Sort: Amount (low to high)</option>
+                  <option value="high-to-low">Sort: Amount (high to low)</option>
+                </select>
+              </div>
+
+              {/* Expenses List */}
+              <div className={styles.expensesList}>
+                {sortedExpenses.map((exp) => (
+                  <div key={exp.id} className={styles.expenseItemRow}>
+                    <div className={styles.expenseItemLeft}>
+                      <span className={styles.expenseCategoryIcon}>{exp.icon || '💳'}</span>
+                      <div>
+                        <div className={styles.expenseTitle}>{exp.title}</div>
+                        <div className={styles.expenseSubmeta}>
+                          Paid by {exp.paidBy} • {exp.split} • {exp.date}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                      <span className={styles.expenseAmount}>{formatCurrency(exp.amount)}</span>
+                      <button
+                        type="button"
+                        className={styles.iconSmallBtn}
+                        onClick={() => handleDeleteExpense(exp.id)}
+                        title="Delete expense"
+                      >
+                        <Trash2 size={15} color="#ef4444" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Add Expense Main Button */}
+              <button
+                type="button"
+                className={styles.addExpenseMainBtn}
+                onClick={() => setAddExpenseModalOpen(true)}
+              >
+                <Plus size={15} />
+                <span>Add expense</span>
+              </button>
+            </div>
+          )}
+        </main>
+
+        {/* 3. Right Interactive Map Column (Always synchronized!) */}
+        <div className={styles.rightMapColumn}>
+          <TripGeoMap
+            nodes={synchronizedMapNodes}
+            selectedNodeId={null}
+            onSelectNode={() => {}}
+            isMiniMap={false}
+          />
+        </div>
+      </div>
+
+      {/* MODAL 1: Add Expense Modal (Matching PDF Page 4 Top) */}
+      {addExpenseModalOpen && (
+        <div className={styles.modalBackdrop}>
+          <div className={styles.modalCard}>
+            <div className={styles.modalHeader}>
+              <h3 className={styles.modalTitle}>Add expense</h3>
+              <button
+                type="button"
+                className={styles.modalCloseBtn}
+                onClick={() => setAddExpenseModalOpen(false)}
               >
                 <X size={18} />
               </button>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
-              <div style={{ background: 'var(--gt-bg-alt)', padding: 12, borderRadius: 8 }}>
-                <span style={{ fontSize: 11, color: 'var(--gt-text-muted)', display: 'block' }}>Scheduled Time</span>
-                <strong>{selectedActivity.time} ({selectedActivity.duration}m)</strong>
+            <form onSubmit={handleSaveNewExpense} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {/* Amount */}
+              <div className={styles.modalFieldGroup}>
+                <label className={styles.modalFieldLabel}>Amount</label>
+                <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #cbd5e1', borderRadius: 8, padding: '8px 12px' }}>
+                  <span style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', marginRight: 6 }}>₹</span>
+                  <input
+                    type="number"
+                    placeholder="0.00"
+                    value={newExpense.amount}
+                    onChange={(e) => setNewExpense({ ...newExpense, amount: e.target.value })}
+                    required
+                    style={{ border: 'none', outline: 'none', fontSize: 16, fontWeight: 600, width: '100%' }}
+                  />
+                </div>
               </div>
-              <div style={{ background: 'var(--gt-bg-alt)', padding: 12, borderRadius: 8 }}>
-                <span style={{ fontSize: 11, color: 'var(--gt-text-muted)', display: 'block' }}>Est. Cost</span>
-                <strong>{selectedActivity.cost > 0 ? formatCurrency(selectedActivity.cost) : 'Complimentary'}</strong>
-              </div>
-            </div>
 
-            <Button variant="primary" size="md" style={{ width: '100%' }} onClick={() => setSelectedActivity(null)}>
-              Done
-            </Button>
+              {/* Touch/Select item */}
+              <div className={styles.modalFieldGroup}>
+                <label className={styles.modalFieldLabel}>Item</label>
+                <div
+                  className={styles.modalSelectTrigger}
+                  onClick={() => setSelectItemModalOpen(true)}
+                >
+                  <span>{newExpense.title ? `${newExpense.icon} ${newExpense.title}` : 'Touch/Select item'}</span>
+                  <ChevronRight size={16} color="#64748b" />
+                </div>
+              </div>
+
+              {/* Paid By */}
+              <div className={styles.modalFieldGroup}>
+                <label className={styles.modalFieldLabel}>Paid by</label>
+                <select
+                  value={newExpense.paidBy}
+                  onChange={(e) => setNewExpense({ ...newExpense, paidBy: e.target.value })}
+                  style={{ padding: '8px 10px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 13, background: '#fff' }}
+                >
+                  <option value="You (the globe trotter)">You (the globe trotter)</option>
+                  <option value="Trip Mate 1">Trip Mate 1</option>
+                  <option value="Trip Mate 2">Trip Mate 2</option>
+                </select>
+              </div>
+
+              {/* Split */}
+              <div className={styles.modalFieldGroup}>
+                <label className={styles.modalFieldLabel}>Split</label>
+                <select
+                  value={newExpense.split}
+                  onChange={(e) => setNewExpense({ ...newExpense, split: e.target.value })}
+                  style={{ padding: '8px 10px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 13, background: '#fff' }}
+                >
+                  <option value="Don't split">Don't split</option>
+                  <option value="Split equally">Split equally</option>
+                  <option value="Split by percentage">Split by percentage</option>
+                </select>
+              </div>
+
+              {/* Date */}
+              <div className={styles.modalFieldGroup}>
+                <label className={styles.modalFieldLabel}>Date (Optional)</label>
+                <input
+                  type="date"
+                  value={newExpense.date}
+                  onChange={(e) => setNewExpense({ ...newExpense, date: e.target.value })}
+                  style={{ padding: '8px 10px', border: '1px solid #cbd5e1', borderRadius: 8, fontSize: 13 }}
+                />
+              </div>
+
+              <button type="submit" className={styles.saveExpenseSubmitBtn}>
+                Save Expense
+              </button>
+            </form>
           </div>
         </div>
       )}
 
-      <ShareModal
-        isOpen={shareModalOpen}
-        onClose={() => setShareModalOpen(false)}
-        trip={trip}
-      />
+      {/* MODAL 2: Select Item Modal (Matching PDF Page 4 Middle) */}
+      {selectItemModalOpen && (
+        <div className={styles.modalBackdrop}>
+          <div className={styles.modalCard} style={{ maxWidth: 440 }}>
+            <div className={styles.modalHeader}>
+              <h3 className={styles.modalTitle}>Select item</h3>
+              <button
+                type="button"
+                className={styles.modalCloseBtn}
+                onClick={() => setSelectItemModalOpen(false)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Select from your trip plan */}
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 8 }}>
+                Select from your trip plan
+              </div>
+              <div style={{ maxHeight: 130, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
+                {days.flatMap((d) => d.activities || []).map((act, i) => (
+                  <button
+                    key={act.id || i}
+                    type="button"
+                    onClick={() => {
+                      setNewExpense({ ...newExpense, title: act.name, category: act.category, icon: '📍', amount: act.cost ? String(act.cost) : newExpense.amount });
+                      setSelectItemModalOpen(false);
+                    }}
+                    style={{ textAlign: 'left', padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: 8, background: '#f8fafc', fontSize: 13, cursor: 'pointer' }}
+                  >
+                    {act.name} ({act.category})
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Or select from a category */}
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 8 }}>
+                Or select from a category
+              </div>
+              <div className={styles.categoryGrid}>
+                {[
+                  { name: 'Flight', icon: '✈️' },
+                  { name: 'Hotel', icon: '🏨' },
+                  { name: 'Rental car', icon: '🚗' },
+                  { name: 'Transit', icon: '🚆' },
+                  { name: 'Food', icon: '🍽️' },
+                  { name: 'Drinks', icon: '🍸' },
+                  { name: 'Sightseeing', icon: '🏛️' },
+                  { name: 'Activities', icon: '🎟️' },
+                  { name: 'Shopping', icon: '🛍️' },
+                ].map((cat) => (
+                  <button
+                    key={cat.name}
+                    type="button"
+                    className={styles.categoryGridBtn}
+                    onClick={() => {
+                      setNewExpense({ ...newExpense, title: cat.name, category: cat.name, icon: cat.icon });
+                      setSelectItemModalOpen(false);
+                    }}
+                  >
+                    <span style={{ fontSize: 20 }}>{cat.icon}</span>
+                    <span>{cat.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Share Modal */}
+      {shareModalOpen && (
+        <ShareModal
+          trip={trip}
+          onClose={() => setShareModalOpen(false)}
+          onUpdateTrip={(updated) => setTrip(updated)}
+        />
+      )}
     </div>
   );
 }

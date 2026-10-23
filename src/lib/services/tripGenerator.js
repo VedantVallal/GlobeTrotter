@@ -596,3 +596,110 @@ export function generateSynchronizedTripPlan({
     itineraryDays,
   };
 }
+
+/**
+ * Generate a visual mind map directly from the user's day-wise itinerary,
+ * creating parent-child relationships with branches extending to both left and right.
+ */
+export function generateMindMapFromItinerary(trip, itineraryDays = []) {
+  if (!trip) return [];
+  const tripId = trip.id;
+  const nodes = [];
+
+  const mainDestination = trip.destinations?.[0] || trip.destination || 'Destination';
+  const cityInfo = findCityInfo(mainDestination);
+
+  // Root node: Central Trip Node
+  const rootNodeId = `node-root-${tripId}`;
+  const rootNode = {
+    id: rootNodeId,
+    type: 'city',
+    parentId: null,
+    tripId,
+    title: trip.title || `Trip to ${mainDestination}`,
+    description: `${itineraryDays.length} days scheduled journey (${trip.startDate || ''} – ${trip.endDate || ''}).`,
+    order: 0,
+    dayNumber: 1,
+    time: '08:00 AM',
+    estimatedCost: Number(trip.budget) || 50000,
+    currency: trip.currency || 'INR',
+    category: 'Trip',
+    image: trip.coverImage || cityInfo?.image || 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&fit=crop',
+    location: mainDestination,
+    notes: 'Central itinerary root node for all planned days and activities.',
+    x: 800,
+    y: Math.max(300, Math.round((itineraryDays.length * 180) / 2)),
+  };
+  nodes.push(rootNode);
+
+  // Split days between left and right branches for balanced radial mind-map layout
+  const totalDays = itineraryDays.length;
+  const halfDays = Math.ceil(totalDays / 2);
+
+  const leftDays = itineraryDays.slice(0, halfDays);
+  const rightDays = itineraryDays.slice(halfDays);
+
+  const processDay = (dayItem, dIdx, side) => {
+    const isLeft = side === 'left';
+    const dayNumber = dayItem.day || dIdx + 1;
+    const dayNodeId = `node-day-${dayNumber}-${tripId}`;
+
+    const dayX = isLeft ? rootNode.x - 340 : rootNode.x + 340;
+    const dayY = 120 + dIdx * 240;
+
+    const dayNode = {
+      id: dayNodeId,
+      type: 'area',
+      parentId: rootNodeId,
+      tripId,
+      title: dayItem.title || `Day ${dayNumber}: ${dayItem.date || ''}`,
+      description: dayItem.location ? `Stops in ${dayItem.location}` : `Day ${dayNumber} Schedule`,
+      order: dayNumber,
+      dayNumber,
+      time: '09:00 AM',
+      estimatedCost: (dayItem.activities || []).reduce((sum, a) => sum + (Number(a.cost) || 0), 0),
+      currency: trip.currency || 'INR',
+      category: 'Sightseeing',
+      location: dayItem.location || mainDestination,
+      image: (dayItem.activities && dayItem.activities[0]?.image) || cityInfo?.image,
+      x: dayX,
+      y: dayY,
+    };
+    nodes.push(dayNode);
+
+    // Child activities branching outwards
+    const activities = dayItem.activities || [];
+    activities.forEach((act, actIdx) => {
+      const actId = act.id || `node-act-${dayNumber}-${actIdx + 1}-${tripId}`;
+      const actX = isLeft ? dayX - 300 : dayX + 300;
+      const actY = dayY - 50 + actIdx * 85;
+
+      nodes.push({
+        id: actId,
+        type: act.category === 'Food' ? 'food' : act.category === 'Transport' ? 'activity' : 'destination',
+        parentId: dayNodeId,
+        tripId,
+        title: act.name || act.title || `Activity ${actIdx + 1}`,
+        description: act.description || `${act.duration || 60} mins in ${act.location || mainDestination}`,
+        order: actIdx + 1,
+        dayNumber,
+        time: act.time || '10:00 AM',
+        duration: typeof act.duration === 'number' ? `${act.duration} mins` : act.duration || '1 hour',
+        estimatedCost: Number(act.cost) || 0,
+        currency: trip.currency || 'INR',
+        category: act.category || 'Sightseeing',
+        location: act.location || dayItem.location || mainDestination,
+        image: act.image || cityInfo?.image,
+        notes: act.notes || '',
+        x: actX,
+        y: actY,
+      });
+    });
+  };
+
+  leftDays.forEach((d, idx) => processDay(d, idx, 'left'));
+  rightDays.forEach((d, idx) => processDay(d, idx, 'right'));
+
+  return nodes;
+}
+
