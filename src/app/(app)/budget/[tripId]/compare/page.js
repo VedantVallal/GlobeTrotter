@@ -19,7 +19,7 @@ import SectionHeader from '@/components/layout/SectionHeader';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import { tripService } from '@/lib/services';
-import { formatCurrency } from '@/lib/utils/formatters';
+import { formatCurrency, CURRENCIES, convertCurrency } from '@/lib/utils/formatters';
 import styles from '../budget.module.css';
 
 export default function ComparePlansPage({ params }) {
@@ -30,11 +30,19 @@ export default function ComparePlansPage({ params }) {
   const [trip, setTrip] = useState(null);
   const [selectedPlan, setSelectedPlan] = useState('balanced');
   const [successToast, setSuccessToast] = useState(false);
+  const [selectedCurrency, setSelectedCurrency] = useState('USD');
 
   useEffect(() => {
     async function loadTrip() {
       const t = await tripService.getTripById(tripId);
       setTrip(t);
+      if (typeof window !== 'undefined') {
+        try {
+          const pref = localStorage.getItem(`gt_pref_curr_${tripId}`);
+          if (pref) setSelectedCurrency(pref);
+          else if (t?.currency) setSelectedCurrency(t.currency);
+        } catch (e) { }
+      }
     }
     loadTrip();
   }, [tripId]);
@@ -162,7 +170,7 @@ export default function ComparePlansPage({ params }) {
 
               <div style={{ marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid var(--gt-border)' }}>
                 <div style={{ fontSize: 32, fontWeight: 800, color: 'var(--gt-text-primary)' }}>
-                  {formatCurrency(plan.cost)}
+                  {formatCurrency(convertCurrency(plan.cost, 'USD', selectedCurrency), selectedCurrency)}
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--gt-text-muted)' }}>
                   Fit: <strong>{plan.budgetFit}</strong>

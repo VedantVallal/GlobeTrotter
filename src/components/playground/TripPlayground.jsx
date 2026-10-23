@@ -122,7 +122,7 @@ export default function TripPlayground({ trip, initialNodes = null }) {
     init();
   }, [tripId, trip]);
 
-  // Persist nodes helper
+  // Persist nodes helper with dynamic two-way sync to itineraryService
   const persistNodes = useCallback(
     (newNodes) => {
       setSaveStatus('Saving...');
@@ -131,7 +131,40 @@ export default function TripPlayground({ trip, initialNodes = null }) {
         stopsCount: newNodes.length,
         destinations: Array.from(new Set(newNodes.filter((n) => n.type === 'city').map((n) => n.title))),
       });
-      setTimeout(() => setSaveStatus('Saved'), 500);
+
+      // Synchronize changes to day-by-day itinerary
+      const daysMap = {};
+      newNodes.forEach((node) => {
+        if (node.type !== 'city') {
+          const dayNum = node.dayNumber || 1;
+          if (!daysMap[dayNum]) {
+            daysMap[dayNum] = [];
+          }
+          daysMap[dayNum].push({
+            id: node.id,
+            name: node.title,
+            category: node.category || 'Sightseeing',
+            time: node.time || '10:00 AM',
+            duration: parseInt(node.duration) || 60,
+            cost: node.estimatedCost || 0,
+            location: node.location || '',
+            image: node.image || '',
+            notes: node.notes || '',
+          });
+        }
+      });
+
+      itineraryService.getItinerary(tripId).then((existingDays) => {
+        if (Array.isArray(existingDays) && existingDays.length > 0) {
+          const updatedDays = existingDays.map((d) => ({
+            ...d,
+            activities: daysMap[d.day] || [],
+          }));
+          itineraryService.saveItinerary(tripId, updatedDays);
+        }
+      });
+
+      setTimeout(() => setSaveStatus('Saved'), 400);
     },
     [tripId]
   );

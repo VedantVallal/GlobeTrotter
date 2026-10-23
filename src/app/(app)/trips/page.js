@@ -221,18 +221,20 @@ export default function MyTripsPage() {
           <div
             style={{
               textAlign: 'center',
-              padding: '60px 20px',
+              padding: '72px 24px',
               background: 'var(--gt-surface)',
               borderRadius: 'var(--gt-radius-2xl)',
               border: '1px solid var(--gt-border)',
             }}
           >
-            <Compass size={48} color="var(--gt-blue)" style={{ margin: '0 auto 16px' }} />
-            <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: 8 }}>
-              {searchQuery ? `No trips found matching "${searchQuery}"` : 'No trips in this view'}
+            <Compass size={54} color="var(--gt-blue)" style={{ margin: '0 auto 16px', opacity: 0.9 }} />
+            <h3 style={{ fontSize: '20px', fontWeight: 700, marginBottom: 8, color: 'var(--gt-text-primary)' }}>
+              {searchQuery ? `No trips found matching "${searchQuery}"` : 'No Trips Planned Yet'}
             </h3>
-            <p style={{ color: 'var(--gt-text-secondary)', fontSize: '14px', marginBottom: 20 }}>
-              {searchQuery ? 'Try clearing filters or searching for another destination' : 'Ready to begin planning your next destination?'}
+            <p style={{ color: 'var(--gt-text-secondary)', fontSize: '14px', maxWidth: 440, margin: '0 auto 24px' }}>
+              {searchQuery
+                ? 'Try clearing your search query or adjusting the status filter.'
+                : 'All predefined sample trips have been removed. You can now plan your journeys completely manually from scratch!'}
             </p>
             {searchQuery ? (
               <Button variant="outline" size="sm" onClick={() => setSearchQuery('')}>
@@ -242,7 +244,7 @@ export default function MyTripsPage() {
               <Link href="/create-trip" style={{ textDecoration: 'none' }}>
                 <Button variant="primary" size="md">
                   <Plus size={16} />
-                  <span>Start a New Trip</span>
+                  <span>Plan a New Trip</span>
                 </Button>
               </Link>
             )}

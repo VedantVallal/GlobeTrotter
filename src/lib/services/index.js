@@ -14,18 +14,26 @@ import {
   updateProfile,
 } from 'firebase/auth';
 
-// Helper to load all trips from persistent storage or default to mockTrips
+// Helper to load all trips from persistent storage (Clean slate: default to empty array)
 function loadPersistedTrips() {
   if (typeof window !== 'undefined') {
     try {
+      const cleanSlateApplied = localStorage.getItem('gt_clean_slate_v3');
+      if (!cleanSlateApplied) {
+        // Clear old mock trips and itineraries once for clean user experience
+        localStorage.removeItem('gt_all_trips');
+        localStorage.removeItem('gt_itinerary_store');
+        localStorage.setItem('gt_clean_slate_v3', 'true');
+        return [];
+      }
       const stored = localStorage.getItem('gt_all_trips');
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       }
     } catch (e) { }
   }
-  return [...mockTrips];
+  return [];
 }
 
 // Helper to save all trips to persistent storage
@@ -38,7 +46,7 @@ function savePersistedTrips(newTrips) {
   }
 }
 
-// Helper to load itinerary store
+// Helper to load itinerary store (Clean slate: default to empty object)
 function loadPersistedItinerary() {
   if (typeof window !== 'undefined') {
     try {
@@ -49,7 +57,7 @@ function loadPersistedItinerary() {
       }
     } catch (e) { }
   }
-  return { ...mockItinerary };
+  return {};
 }
 
 // Helper to save itinerary store
@@ -62,7 +70,7 @@ function savePersistedItinerary(newItinerary) {
   }
 }
 
-// In-memory state initialized with persistent storage
+// In-memory state initialized with clean persistent storage
 let trips = loadPersistedTrips();
 let itinerary = loadPersistedItinerary();
 
@@ -79,7 +87,7 @@ export const tripService = {
     return this.getAll(userId);
   },
   async getById(tripId) {
-    if (!tripId) return trips[0] || null;
+    if (!tripId) return null;
     const all = await this.getAll();
     // 1. Direct match
     let found = all.find(t => t.id === tripId);
@@ -90,8 +98,7 @@ export const tripService = {
     found = all.find(t => String(t.id).toLowerCase().replace(/-0+/, '-') === norm);
     if (found) return found;
 
-    // 3. Fallback to first trip so pages don't hang indefinitely
-    return all[0] || trips[0] || null;
+    return null;
   },
   async getTripById(tripId) {
     return this.getById(tripId);
@@ -294,7 +301,7 @@ export const itineraryService = {
     if (typeof window !== 'undefined') {
       itinerary = loadPersistedItinerary();
     }
-    if (!tripId) return itinerary['trip-002'] || [];
+    if (!tripId) return [];
     if (itinerary[tripId] && itinerary[tripId].length > 0) return itinerary[tripId];
 
     const norm = String(tripId).toLowerCase().replace(/-0+/, '-');
@@ -303,8 +310,7 @@ export const itineraryService = {
     );
     if (matchedKey && itinerary[matchedKey]) return itinerary[matchedKey];
 
-    // Fallback to sample itinerary days so schedule is never completely empty
-    return itinerary['trip-002'] || [];
+    return [];
   },
   async getItinerary(tripId) { return this.getByTrip(tripId); },
   async addItem(tripId, item) {
@@ -378,7 +384,90 @@ export const playgroundService = {
 
 export const budgetService = {
   async getByTrip(tripId) {
-    return mockBudgets[tripId] || mockBudgets['trip-001'] || null;
+    if (!tripId) return null;
+    if (typeof window !== 'undefined') {
+      try {
+        const customBudget = localStorage.getItem(`gt_budget_${tripId}`);
+        if (customBudget) return JSON.parse(customBudget);
+      } catch (e) { }
+    }
+
+    const trip = await tripService.getById(tripId);
+    if (!trip) return null;
+
+    let recordedExpenses = [];
+    if (typeof window !== 'undefined') {
+      try {
+        const storedExp = localStorage.getItem(`gt_expenses_${tripId}`);
+        if (storedExp) recordedExpenses = JSON.parse(storedExp);
+      } catch (e) { }
+    }
+
+    const expensesSum = recordedExpenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
+    const categoryMap = {};
+    recordedExpenses.forEach((exp) => {
+      const cat = exp.category || 'Other';
+      categoryMap[cat] = (categoryMap[cat] || 0) + (Number(exp.amount) || 0);
+    });
+
+    // Also derive daily spending schedule from user's actual itinerary days
+    const itinData = await itineraryService.getByTrip(tripId);
+    let daily = [];
+    let activitiesCostSum = 0;
+
+    if (Array.isArray(itinData) && itinData.length > 0) {
+      daily = itinData.map((d, idx) => {
+        const acts = (d.activities || []).map((a, aIdx) => ({
+          id: a.id || `day-${d.day || idx + 1}-${aIdx}`,
+          name: a.title || a.name || 'Activity',
+          cost: Number(a.cost) || 0,
+          category: a.category || 'Sightseeing',
+        }));
+        const dayCost = acts.reduce((s, a) => s + a.cost, 0);
+        activitiesCostSum += dayCost;
+
+        acts.forEach((a) => {
+          if (a.cost > 0) {
+            categoryMap[a.category] = (categoryMap[a.category] || 0) + a.cost;
+          }
+        });
+
+        return {
+          day: d.day || idx + 1,
+          date: d.date || `Day ${d.day || idx + 1}`,
+          estimated: dayCost,
+          activities: acts.map((a) => a.name).join(', ') || 'No activities added',
+          activitiesList: acts,
+        };
+      });
+    }
+
+    const estimated = expensesSum + activitiesCostSum;
+
+    const categoryColors = {
+      Flight: '#4169D8',
+      Hotel: '#7C6AF5',
+      Food: '#F59E42',
+      Activities: '#25845A',
+      Transport: '#E05C5C',
+      Sightseeing: '#2563eb',
+      Other: '#8A96A6',
+    };
+
+    const categories = Object.entries(categoryMap).map(([name, amount]) => ({
+      name,
+      amount,
+      color: categoryColors[name] || '#8A96A6',
+    }));
+
+    return {
+      tripId,
+      total: trip.budget || 0,
+      currency: trip.currency || 'USD',
+      estimated,
+      categories,
+      daily,
+    };
   },
   async getBudget(tripId) {
     return this.getByTrip(tripId);

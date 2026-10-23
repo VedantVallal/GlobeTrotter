@@ -74,39 +74,7 @@ export default function ItineraryHubPage() {
         if (days && days.length > 0) {
           setItineraryDays(days);
         } else {
-          // Default sample schedule if empty
-          setItineraryDays([
-            {
-              day: 1,
-              title: 'Arrival & Scenic Exploration',
-              location: 'Main Destination',
-              activities: [
-                { id: 'act-1', time: '10:00 AM', name: 'Hotel Check-in & Refresh', category: 'Transport', duration: 60, cost: 0, location: 'City Center' },
-                { id: 'act-2', time: '01:30 PM', name: 'Authentic Local Food & Tasting Tour', category: 'Food', duration: 90, cost: 35, location: 'Old Market' },
-                { id: 'act-3', time: '05:00 PM', name: 'Sunset Panoramic Viewpoint & Walk', category: 'Heritage', duration: 120, cost: 15, location: 'Harbor Promenade' },
-              ],
-            },
-            {
-              day: 2,
-              title: 'Highlights, Culture & Coastal Trail',
-              location: 'Coastal Route',
-              activities: [
-                { id: 'act-4', time: '09:00 AM', name: 'Historic Fort & Architectural Walk', category: 'Culture', duration: 120, cost: 20, location: 'Historic Quarter' },
-                { id: 'act-5', time: '02:00 PM', name: 'Beach Watersports & Lagoon Cruise', category: 'Beach', duration: 150, cost: 50, location: 'Sandy Cove' },
-                { id: 'act-6', time: '07:30 PM', name: 'Seaside Dinner & Evening Lounge', category: 'Food', duration: 100, cost: 45, location: 'Pier 4' },
-              ],
-            },
-            {
-              day: 3,
-              title: 'Adventure, Hidden Gems & Departure',
-              location: 'Valley & Bay',
-              activities: [
-                { id: 'act-7', time: '08:30 AM', name: 'Sunrise Hike & Photography Trek', category: 'Adventure', duration: 140, cost: 25, location: 'Ridge Trail' },
-                { id: 'act-8', time: '01:00 PM', name: 'Souvenir Shopping & Farewell Cafe', category: 'Culture', duration: 75, cost: 20, location: 'Boutique Alley' },
-                { id: 'act-9', time: '04:30 PM', name: 'Transit to Airport / Next Destination', category: 'Transport', duration: 90, cost: 30, location: 'Terminal' },
-              ],
-            },
-          ]);
+          setItineraryDays([]);
         }
       } catch (err) {
         console.error('Failed to load itinerary', err);
@@ -204,40 +172,78 @@ export default function ItineraryHubPage() {
           </div>
         </div>
 
-        {/* Metric Summary Cards */}
-        <div className={styles.statsGrid}>
-          <div className={styles.statCard}>
-            <div className={styles.statLabel}>Active Trips</div>
-            <div className={styles.statValue}>{trips.length}</div>
-            <div className={styles.statSubtext}>
-              <CheckCircle2 size={12} color="#059669" /> All synced with Map & Canvas
-            </div>
+        {trips.length === 0 ? (
+          <div
+            style={{
+              textAlign: 'center',
+              padding: '72px 24px',
+              background: 'var(--gt-surface, #ffffff)',
+              borderRadius: 'var(--gt-radius-2xl, 16px)',
+              border: '1px solid var(--gt-border, #e2e8f0)',
+              marginTop: 24,
+            }}
+          >
+            <Calendar size={54} color="var(--gt-blue, #2563eb)" style={{ margin: '0 auto 16px', opacity: 0.9 }} />
+            <h3 style={{ fontSize: '20px', fontWeight: 700, marginBottom: 8, color: 'var(--gt-text-primary, #0f172a)' }}>
+              No Itineraries Created Yet
+            </h3>
+            <p style={{ color: 'var(--gt-text-secondary, #64748b)', fontSize: '14px', maxWidth: 460, margin: '0 auto 24px' }}>
+              All predefined sample itineraries have been removed. Plan a new trip to create your customized day-by-day travel itinerary from scratch.
+            </p>
+            <Link
+              href="/create-trip"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                background: 'var(--gt-blue, #2563eb)',
+                color: '#ffffff',
+                padding: '10px 22px',
+                borderRadius: '8px',
+                fontWeight: 600,
+                textDecoration: 'none',
+              }}
+            >
+              <Plus size={16} />
+              <span>Plan a New Trip</span>
+            </Link>
           </div>
-          <div className={styles.statCard}>
-            <div className={styles.statLabel}>Days Scheduled</div>
-            <div className={styles.statValue}>{totalDays} Days</div>
-            <div className={styles.statSubtext}>
-              <Clock size={12} color="#2563eb" /> Day-by-day timed itineraries
+        ) : (
+          <>
+            {/* Metric Summary Cards */}
+            <div className={styles.statsGrid}>
+              <div className={styles.statCard}>
+                <div className={styles.statLabel}>Active Trips</div>
+                <div className={styles.statValue}>{trips.length}</div>
+                <div className={styles.statSubtext}>
+                  <CheckCircle2 size={12} color="#059669" /> All synced with Map & Canvas
+                </div>
+              </div>
+              <div className={styles.statCard}>
+                <div className={styles.statLabel}>Days Scheduled</div>
+                <div className={styles.statValue}>{totalDays} Days</div>
+                <div className={styles.statSubtext}>
+                  <Clock size={12} color="#2563eb" /> Day-by-day timed itineraries
+                </div>
+              </div>
+              <div className={styles.statCard}>
+                <div className={styles.statLabel}>Activities Logged</div>
+                <div className={styles.statValue}>{totalActivities}</div>
+                <div className={styles.statSubtext}>
+                  <MapPin size={12} color="#7c3aed" /> Sightseeing, food, transport
+                </div>
+              </div>
+              <div className={styles.statCard}>
+                <div className={styles.statLabel}>Est. Itinerary Budget</div>
+                <div className={styles.statValue}>
+                  {currentTrip?.currency === 'INR' ? '₹' : '$'}
+                  {(currentTrip?.budget || totalEstCost || 0).toLocaleString()}
+                </div>
+                <div className={styles.statSubtext}>
+                  <DollarSign size={12} color="#ea580c" /> Auto-calculated from stops
+                </div>
+              </div>
             </div>
-          </div>
-          <div className={styles.statCard}>
-            <div className={styles.statLabel}>Activities Logged</div>
-            <div className={styles.statValue}>{totalActivities}</div>
-            <div className={styles.statSubtext}>
-              <MapPin size={12} color="#7c3aed" /> Sightseeing, food, transport
-            </div>
-          </div>
-          <div className={styles.statCard}>
-            <div className={styles.statLabel}>Est. Itinerary Budget</div>
-            <div className={styles.statValue}>
-              {currentTrip?.currency === 'INR' ? '₹' : '$'}
-              {(currentTrip?.budget || totalEstCost || 1850).toLocaleString()}
-            </div>
-            <div className={styles.statSubtext}>
-              <DollarSign size={12} color="#ea580c" /> Auto-calculated from stops
-            </div>
-          </div>
-        </div>
 
         {/* Trip Selector Bar & Search */}
         <div className={styles.selectorSection}>
@@ -400,54 +406,77 @@ export default function ItineraryHubPage() {
 
                 {/* Activities List */}
                 <div className={styles.activitiesList}>
-                  {(dayItem.activities || []).map((activity, aIdx) => {
-                    const catStyle = CATEGORY_COLORS[activity.category] || {
-                      bg: '#f1f5f9',
-                      text: '#475569',
-                    };
-                    return (
-                      <div key={activity.id || aIdx} className={styles.activityCard}>
-                        <div className={styles.activityLeft}>
-                          <div className={styles.activityTime}>
-                            <Clock size={12} color="#64748b" />
-                            <span>{activity.time || 'Flexible'}</span>
+                  {(!dayItem.activities || dayItem.activities.length === 0) ? (
+                    <div style={{ padding: '28px 16px', textAlign: 'center', color: '#64748b', fontSize: 13, background: '#f8fafc', borderRadius: 8, margin: '8px 0', border: '1px dashed #cbd5e1' }}>
+                      <p style={{ margin: '0 0 10px', fontWeight: 500 }}>No activities planned for this day yet.</p>
+                      <Link
+                        href={`/itinerary/${currentTrip.id}`}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: '#2563eb',
+                          textDecoration: 'none',
+                          background: '#eff6ff',
+                          padding: '6px 12px',
+                          borderRadius: 6,
+                        }}
+                      >
+                        <Plus size={14} /> Add places to Day {dayItem.day}
+                      </Link>
+                    </div>
+                  ) : (
+                    dayItem.activities.map((activity, aIdx) => {
+                      const catStyle = CATEGORY_COLORS[activity.category] || {
+                        bg: '#f1f5f9',
+                        text: '#475569',
+                      };
+                      return (
+                        <div key={activity.id || aIdx} className={styles.activityCard}>
+                          <div className={styles.activityLeft}>
+                            <div className={styles.activityTime}>
+                              <Clock size={12} color="#64748b" />
+                              <span>{activity.time || 'Flexible'}</span>
+                            </div>
+                            <div className={styles.activityDot} />
+                            <div className={styles.activityInfo}>
+                              <div className={styles.activityName}>{activity.name}</div>
+                              {activity.location && (
+                                <div className={styles.activityLocation}>
+                                  <MapPin size={11} /> {activity.location}
+                                </div>
+                              )}
+                            </div>
                           </div>
-                          <div className={styles.activityDot} />
-                          <div className={styles.activityInfo}>
-                            <div className={styles.activityName}>{activity.name}</div>
-                            {activity.location && (
-                              <div className={styles.activityLocation}>
-                                <MapPin size={11} /> {activity.location}
+
+                          <div className={styles.activityRight}>
+                            {activity.category && (
+                              <span
+                                className={styles.categoryTag}
+                                style={{ background: catStyle.bg, color: catStyle.text }}
+                              >
+                                {activity.category}
+                              </span>
+                            )}
+                            {activity.duration && (
+                              <div className={styles.activityDuration}>
+                                <Clock size={12} /> {activity.duration} min
+                              </div>
+                            )}
+                            {activity.cost !== undefined && (
+                              <div className={styles.activityCost}>
+                                {activity.cost === 0
+                                  ? 'Free'
+                                  : `${currentTrip?.currency === 'INR' ? '₹' : '$'}${activity.cost}`}
                               </div>
                             )}
                           </div>
                         </div>
-
-                        <div className={styles.activityRight}>
-                          {activity.category && (
-                            <span
-                              className={styles.categoryTag}
-                              style={{ background: catStyle.bg, color: catStyle.text }}
-                            >
-                              {activity.category}
-                            </span>
-                          )}
-                          {activity.duration && (
-                            <div className={styles.activityDuration}>
-                              <Clock size={12} /> {activity.duration} min
-                            </div>
-                          )}
-                          {activity.cost !== undefined && (
-                            <div className={styles.activityCost}>
-                              {activity.cost === 0
-                                ? 'Free'
-                                : `${currentTrip?.currency === 'INR' ? '₹' : '$'}${activity.cost}`}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })
+                  )}
                 </div>
               </div>
             ))
@@ -516,6 +545,8 @@ export default function ItineraryHubPage() {
                 ))}
             </div>
           </div>
+        )}
+          </>
         )}
       </main>
 

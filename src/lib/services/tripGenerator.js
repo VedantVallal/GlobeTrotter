@@ -61,7 +61,72 @@ function findCityInfo(nameOrQuery) {
 }
 
 /**
+ * Generate structured blank days for user manual planning:
+ * Creates Day 1, Day 2... based on date range, with empty activity lists
+ * so the user plans every activity, timing, and expense manually.
+ */
+export function generateBlankManualTripPlan({
+  tripId,
+  startLocation = 'Pune, India',
+  destinations = ['Pune'],
+  budget = 50000,
+  currency = 'INR',
+  startDate = '2026-10-29',
+  endDate = '2026-11-03',
+  travelers = 2,
+}) {
+  const start = new Date(startDate || '2026-10-29');
+  const end = new Date(endDate || '2026-11-03');
+  let totalDays = Math.max(1, Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1);
+  if (isNaN(totalDays) || totalDays < 1) totalDays = 1;
+
+  const chosenDest = destinations[0] || (startLocation ? startLocation.split(',')[0].trim() : 'Custom Destination');
+  const destInfo = findCityInfo(chosenDest);
+  const cityCoords = destInfo?.coordinates || { lat: 18.5204, lng: 73.8567 };
+
+  // Structured blank days without pre-defined activities
+  const itineraryDays = Array.from({ length: totalDays }, (_, i) => {
+    const dayNum = i + 1;
+    const dayDate = addDays(startDate, i);
+    return {
+      day: dayNum,
+      date: dayDate,
+      title: `Day ${dayNum}`,
+      location: chosenDest,
+      activities: [], // Clean & empty: ready for user to manually add activities
+    };
+  });
+
+  // Base city node for playground canvas
+  const nodes = [
+    {
+      id: `node-city-${tripId}`,
+      type: 'city',
+      parentId: null,
+      tripId,
+      title: chosenDest,
+      description: `Primary destination for your trip. Add activities and places to build your journey.`,
+      order: 0,
+      dayNumber: 1,
+      currency,
+      category: 'Sightseeing',
+      image: destInfo?.image || 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&fit=crop',
+      location: `${chosenDest}, ${destInfo?.country || 'India'}`,
+      coordinates: cityCoords,
+      x: 100,
+      y: 120,
+    },
+  ];
+
+  return {
+    nodes,
+    itineraryDays,
+  };
+}
+
+/**
  * Generate fully synchronized trip plan:
+
  * 1. nodes for TripPlayground (Canvas & Map)
  * 2. itineraryDays for ItineraryPage & Timeline Builder
  * Both share the same IDs, day numbers, times, categories, and INR costs.

@@ -31,8 +31,8 @@ import {
 } from 'lucide-react';
 import ShareModal from '@/components/ui/ShareModal';
 import { tripService, itineraryService, playgroundService, budgetService } from '@/lib/services';
-import { generateSynchronizedTripPlan, generateMindMapFromItinerary } from '@/lib/services/tripGenerator';
-import { formatCurrency, formatDateRange, formatDate } from '@/lib/utils/formatters';
+import { generateSynchronizedTripPlan, generateMindMapFromItinerary, generateBlankManualTripPlan } from '@/lib/services/tripGenerator';
+import { formatCurrency, formatDateRange, formatDate, CURRENCIES, convertCurrency } from '@/lib/utils/formatters';
 import citiesData from '@/lib/data/citiesData.json';
 import styles from './itinerary.module.css';
 
@@ -96,14 +96,26 @@ export default function TripPlanningInterface({ params }) {
   const [mindMapGenerated, setMindMapGenerated] = useState(false);
   const [mindMapNodes, setMindMapNodes] = useState([]);
 
-  // Budget State
-  const [expenses, setExpenses] = useState([
-    { id: 'exp-1', title: 'Roundtrip Flights', category: 'Flight', icon: '✈️', amount: 22000, paidBy: 'You', split: "Don't split", date: '2026-10-29' },
-    { id: 'exp-2', title: 'Boutique Stay & Breakfast', category: 'Hotel', icon: '🏨', amount: 15500, paidBy: 'You', split: 'Split equally', date: '2026-10-30' },
-  ]);
+  // Budget State with Multiple Currency Options (Clean slate: empty by default)
+  const [expenses, setExpenses] = useState([]);
+  const [selectedCurrency, setSelectedCurrency] = useState('USD');
   const [budgetSort, setBudgetSort] = useState('low-to-high');
   const [isEditingBudget, setIsEditingBudget] = useState(false);
   const [editedBudgetAmount, setEditedBudgetAmount] = useState(50000);
+
+  // Manual Add Place / Activity Modal for User Planning
+  const [manualPlaceModal, setManualPlaceModal] = useState({
+    isOpen: false,
+    targetDay: 1,
+  });
+  const [manualPlaceForm, setManualPlaceForm] = useState({
+    name: '',
+    category: 'Sightseeing',
+    time: '10:00 AM',
+    duration: 90,
+    cost: '',
+    location: '',
+  });
 
   // Add Expense & Select Item Modals
   const [addExpenseModalOpen, setAddExpenseModalOpen] = useState(false);
@@ -149,10 +161,32 @@ export default function TripPlanningInterface({ params }) {
           };
         }
 
-        // If itinerary days missing, auto-generate synchronized plan
+        // Load custom expenses from storage (Clean slate)
+        try {
+          const storedExp = localStorage.getItem(`gt_expenses_${tripId}`);
+          if (storedExp) {
+            setExpenses(JSON.parse(storedExp));
+          } else {
+            setExpenses([]);
+          }
+        } catch (e) {
+          setExpenses([]);
+        }
+
+        // Load preferred currency for budget
+        try {
+          const prefCurr = localStorage.getItem(`gt_pref_curr_${tripId}`);
+          if (prefCurr) {
+            setSelectedCurrency(prefCurr);
+          } else if (loadedTrip.currency) {
+            setSelectedCurrency(loadedTrip.currency);
+          }
+        } catch (e) { }
+
+        // If itinerary days missing, generate structured blank days for user manual planning
         if (!loadedDays || loadedDays.length === 0) {
           const dest = loadedTrip.destinations?.[0] || loadedTrip.destination || 'Pune';
-          const plan = generateSynchronizedTripPlan({
+          const plan = generateBlankManualTripPlan({
             tripId,
             startLocation: `${dest}, India`,
             destinations: [dest],
@@ -252,6 +286,64 @@ export default function TripPlanningInterface({ params }) {
     return mapNodes;
   }, [days, nodes, trip, currentCityInfo, tripId]);
 
+  // Synchronize Itinerary days changes back to Playground nodes and map
+  const syncDaysToPlayground = useCallback(
+    (updatedDays) => {
+      const dest = trip?.destinations?.[0] || trip?.destination || 'Pune';
+      const cityCoords = currentCityInfo?.coordinates || { lat: 18.5204, lng: 73.8567 };
+
+      const newNodes = [
+        {
+          id: `node-city-${tripId}`,
+          type: 'city',
+          parentId: null,
+          tripId,
+          title: dest,
+          description: `Primary destination for your trip.`,
+          order: 0,
+          dayNumber: 1,
+          currency: trip?.currency || 'USD',
+          category: 'Sightseeing',
+          coordinates: cityCoords,
+          x: 100,
+          y: 120,
+        },
+      ];
+
+      updatedDays.forEach((dayItem, dIdx) => {
+        (dayItem.activities || []).forEach((act, aIdx) => {
+          const angle = (dIdx * 60 + aIdx * 45) * (Math.PI / 180);
+          const radius = 0.02 + aIdx * 0.012;
+          const lat = cityCoords.lat + Math.sin(angle) * radius;
+          const lng = cityCoords.lng + Math.cos(angle) * radius;
+
+          newNodes.push({
+            id: act.id || `node-act-${dayItem.day}-${aIdx}`,
+            type: act.category === 'Food' ? 'food' : 'destination',
+            parentId: `node-city-${tripId}`,
+            tripId,
+            title: act.name,
+            category: act.category || 'Sightseeing',
+            dayNumber: dayItem.day,
+            order: aIdx + 1,
+            time: act.time || '10:00 AM',
+            duration: `${act.duration || 60} min`,
+            estimatedCost: act.cost || 0,
+            currency: trip?.currency || 'USD',
+            location: act.location || dest,
+            coordinates: { lat, lng },
+            x: 250 + dIdx * 180,
+            y: 80 + aIdx * 120,
+          });
+        });
+      });
+
+      setNodes(newNodes);
+      playgroundService.saveNodes(tripId, newNodes);
+    },
+    [trip, currentCityInfo, tripId]
+  );
+
   // ADD PLACE TO SPECIFIC DAY
   const handleAddPlaceToDay = (place, targetDayNum = 1) => {
     const newAct = {
@@ -260,7 +352,7 @@ export default function TripPlanningInterface({ params }) {
       name: place.name || 'New Selected Spot',
       category: place.category || 'Sightseeing',
       duration: 90,
-      cost: place.price || 300,
+      cost: place.price || 0,
       location: currentCityInfo.name,
       image: place.image || currentCityInfo.image,
     };
@@ -277,6 +369,48 @@ export default function TripPlanningInterface({ params }) {
 
     setDays(updated);
     itineraryService.saveItinerary(tripId, updated);
+    syncDaysToPlayground(updated);
+  };
+
+  // CONFIRM CUSTOM MANUAL PLACE
+  const handleConfirmManualPlace = (e) => {
+    if (e) e.preventDefault();
+    if (!manualPlaceForm.name.trim()) return;
+
+    const newAct = {
+      id: `act-${Date.now()}`,
+      time: manualPlaceForm.time || '10:00 AM',
+      name: manualPlaceForm.name.trim(),
+      category: manualPlaceForm.category || 'Sightseeing',
+      duration: Number(manualPlaceForm.duration) || 60,
+      cost: Number(manualPlaceForm.cost) || 0,
+      location: manualPlaceForm.location.trim() || currentCityInfo.name,
+      image: currentCityInfo.image,
+    };
+
+    const updated = days.map((d) => {
+      if (d.day === manualPlaceModal.targetDay) {
+        return {
+          ...d,
+          activities: [...(d.activities || []), newAct],
+        };
+      }
+      return d;
+    });
+
+    setDays(updated);
+    itineraryService.saveItinerary(tripId, updated);
+    syncDaysToPlayground(updated);
+
+    setManualPlaceForm({
+      name: '',
+      category: 'Sightseeing',
+      time: '10:00 AM',
+      duration: 90,
+      cost: '',
+      location: '',
+    });
+    setManualPlaceModal({ isOpen: false, targetDay: 1 });
   };
 
   // REMOVE ACTIVITY
@@ -292,6 +426,7 @@ export default function TripPlanningInterface({ params }) {
     });
     setDays(updated);
     itineraryService.saveItinerary(tripId, updated);
+    syncDaysToPlayground(updated);
   };
 
   // REORDER ACTIVITIES (Up / Down)
@@ -311,6 +446,7 @@ export default function TripPlanningInterface({ params }) {
     });
     setDays(updated);
     itineraryService.saveItinerary(tripId, updated);
+    syncDaysToPlayground(updated);
   };
 
   // CREATE MIND MAP TRIGGER
@@ -325,28 +461,62 @@ export default function TripPlanningInterface({ params }) {
   const handleSaveBudget = () => {
     setIsEditingBudget(false);
     if (trip) {
-      tripService.update(tripId, { budget: Number(editedBudgetAmount) });
-      setTrip({ ...trip, budget: Number(editedBudgetAmount) });
+      const baseCurrency = trip?.currency || 'USD';
+      // If user edited budget while in another currency, convert back to base
+      const budgetInBase = convertCurrency(Number(editedBudgetAmount), selectedCurrency, baseCurrency);
+      tripService.update(tripId, { budget: Math.round(budgetInBase) });
+      setTrip({ ...trip, budget: Math.round(budgetInBase) });
     }
   };
+
+  // CURRENCY SWITCHER HANDLER
+  const handleCurrencyChange = (newCurr) => {
+    setSelectedCurrency(newCurr);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(`gt_pref_curr_${tripId}`, newCurr);
+      } catch (e) { }
+    }
+  };
+
+  // DYNAMIC MULTI-CURRENCY TOTALS
+  const baseCurrency = trip?.currency || 'USD';
+  const convertedBudget = convertCurrency(trip?.budget || 50000, baseCurrency, selectedCurrency);
+  const totalExpensesSum = expenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
+  const convertedExpensesSum = convertCurrency(totalExpensesSum, baseCurrency, selectedCurrency);
+  const convertedRemaining = convertedBudget - convertedExpensesSum;
 
   // ADD EXPENSE
   const handleSaveNewExpense = (e) => {
     if (e) e.preventDefault();
     if (!newExpense.title || !newExpense.amount) return;
 
+    // Convert new expense amount back to base trip currency for consistent internal math
+    const inputAmount = Number(newExpense.amount);
+    const amountInBase = convertCurrency(inputAmount, selectedCurrency, baseCurrency);
+
     const expenseItem = {
       id: `exp-${Date.now()}`,
       title: newExpense.title,
       category: newExpense.category,
-      icon: newExpense.icon,
-      amount: Number(newExpense.amount),
+      icon: newExpense.icon || '💳',
+      amount: amountInBase,
+      currency: baseCurrency,
+      originalAmount: inputAmount,
+      originalCurrency: selectedCurrency,
       paidBy: newExpense.paidBy,
       split: newExpense.split,
       date: newExpense.date || trip?.startDate || '2026-10-29',
     };
 
-    setExpenses([expenseItem, ...expenses]);
+    const updatedExpenses = [expenseItem, ...expenses];
+    setExpenses(updatedExpenses);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(`gt_expenses_${tripId}`, JSON.stringify(updatedExpenses));
+      } catch (e) { }
+    }
+
     setAddExpenseModalOpen(false);
     setNewExpense({
       title: '',
@@ -361,7 +531,13 @@ export default function TripPlanningInterface({ params }) {
 
   // DELETE EXPENSE
   const handleDeleteExpense = (expId) => {
-    setExpenses(expenses.filter((e) => e.id !== expId));
+    const updated = expenses.filter((e) => e.id !== expId);
+    setExpenses(updated);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(`gt_expenses_${tripId}`, JSON.stringify(updated));
+      } catch (e) { }
+    }
   };
 
   // Sorted Expenses
@@ -374,11 +550,6 @@ export default function TripPlanningInterface({ params }) {
     }
     return list;
   }, [expenses, budgetSort]);
-
-  // Total Expenses sum
-  const totalExpensesSum = useMemo(() => {
-    return expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
-  }, [expenses]);
 
   // AI Assistant Chat Send
   const handleSendChat = (e) => {
@@ -812,14 +983,20 @@ export default function TripPlanningInterface({ params }) {
                     ))}
                   </div>
 
+                  {(!dayItem.activities || dayItem.activities.length === 0) && (
+                    <div style={{ padding: '24px 16px', textAlign: 'center', background: '#f8fafc', borderRadius: 8, margin: '8px 0', border: '1px dashed #cbd5e1', color: '#64748b', fontSize: 13 }}>
+                      No places planned for Day {dayItem.day} yet. Click below to add your first stop!
+                    </div>
+                  )}
+
                   {/* + Add a place button for this specific day */}
                   <button
                     type="button"
                     className={styles.addPlaceDayBtn}
-                    onClick={() => handleAddPlaceToDay({ name: `New Activity for Day ${dayItem.day}`, category: 'Sightseeing', price: 250 }, dayItem.day)}
+                    onClick={() => setManualPlaceModal({ isOpen: true, targetDay: dayItem.day })}
                   >
                     <Plus size={14} />
-                    <span>Add a place</span>
+                    <span>Add a place to Day {dayItem.day}</span>
                   </button>
                 </div>
               ))}
@@ -890,49 +1067,79 @@ export default function TripPlanningInterface({ params }) {
             <div>
               {/* Budget Total Card */}
               <div className={styles.budgetHeaderSection}>
-                <div className={styles.budgetingTitle}>Budgeting</div>
-                <div className={styles.budgetTotalRow}>
-                  {!isEditingBudget ? (
-                    <>
-                      <div className={styles.budgetTotalAmount}>
-                        {formatCurrency(trip.budget || 50000)}
-                      </div>
-                      <button
-                        type="button"
-                        className={styles.budgetEditIconBtn}
-                        onClick={() => setIsEditingBudget(true)}
-                        title="Edit Target Budget"
-                      >
-                        <Edit2 size={18} />
-                      </button>
-                    </>
-                  ) : (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <input
-                        type="number"
-                        value={editedBudgetAmount}
-                        onChange={(e) => setEditedBudgetAmount(e.target.value)}
-                        style={{ fontSize: 24, fontWeight: 700, padding: '4px 10px', borderRadius: 8, border: '1px solid #2563eb', width: 160 }}
-                      />
-                      <button
-                        type="button"
-                        onClick={handleSaveBudget}
-                        style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 14px', fontWeight: 600, cursor: 'pointer' }}
-                      >
-                        Save
-                      </button>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
+                  <div>
+                    <div className={styles.budgetingTitle}>Budgeting</div>
+                    <div className={styles.budgetTotalRow}>
+                      {!isEditingBudget ? (
+                        <>
+                          <div className={styles.budgetTotalAmount}>
+                            {formatCurrency(convertedBudget, selectedCurrency)}
+                          </div>
+                          <button
+                            type="button"
+                            className={styles.budgetEditIconBtn}
+                            onClick={() => {
+                              setEditedBudgetAmount(Math.round(convertedBudget));
+                              setIsEditingBudget(true);
+                            }}
+                            title="Edit Target Budget"
+                          >
+                            <Edit2 size={18} />
+                          </button>
+                        </>
+                      ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <input
+                            type="number"
+                            value={editedBudgetAmount}
+                            onChange={(e) => setEditedBudgetAmount(e.target.value)}
+                            style={{ fontSize: 24, fontWeight: 700, padding: '4px 10px', borderRadius: 8, border: '1px solid #2563eb', width: 160 }}
+                          />
+                          <button
+                            type="button"
+                            onClick={handleSaveBudget}
+                            style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 14px', fontWeight: 600, cursor: 'pointer' }}
+                          >
+                            Save
+                          </button>
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
+
+                  {/* Multi-Currency Options Pill Bar */}
+                  <div className={styles.currencySelectorRow} style={{ marginTop: 0 }}>
+                    <span className={styles.currencyLabel}>Currency:</span>
+                    <div className={styles.currencyChips}>
+                      {CURRENCIES.map((curr) => {
+                        const active = selectedCurrency === curr.code;
+                        return (
+                          <button
+                            key={curr.code}
+                            type="button"
+                            className={`${styles.currencyChip} ${active ? styles.currencyChipActive : ''}`}
+                            onClick={() => handleCurrencyChange(curr.code)}
+                            title={`${curr.name} (${curr.symbol})`}
+                          >
+                            <span>{curr.flag}</span>
+                            <span>{curr.code}</span>
+                            <span style={{ opacity: 0.8 }}>({curr.symbol})</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
 
-                <div style={{ fontSize: 13, color: '#64748b' }}>
-                  Total Expenses Logged: <strong style={{ color: '#0f172a' }}>{formatCurrency(totalExpensesSum)}</strong> • Remaining: <strong style={{ color: (trip.budget - totalExpensesSum) >= 0 ? '#16a34a' : '#dc2626' }}>{formatCurrency((trip.budget || 50000) - totalExpensesSum)}</strong>
+                <div style={{ fontSize: 13, color: '#64748b', marginTop: 8 }}>
+                  Total Expenses Logged: <strong style={{ color: '#0f172a' }}>{formatCurrency(convertedExpensesSum, selectedCurrency)}</strong> • Remaining: <strong style={{ color: convertedRemaining >= 0 ? '#16a34a' : '#dc2626' }}>{formatCurrency(convertedRemaining, selectedCurrency)}</strong>
                 </div>
               </div>
 
               {/* Expenses List Header */}
               <div className={styles.budgetExpensesHeader}>
-                <h3 className={styles.expensesTitle}>Expenses</h3>
+                <h3 className={styles.expensesTitle}>Expenses ({expenses.length})</h3>
                 <select
                   className={styles.sortSelect}
                   value={budgetSort}
@@ -945,42 +1152,61 @@ export default function TripPlanningInterface({ params }) {
 
               {/* Expenses List */}
               <div className={styles.expensesList}>
-                {sortedExpenses.map((exp) => (
-                  <div key={exp.id} className={styles.expenseItemRow}>
-                    <div className={styles.expenseItemLeft}>
-                      <span className={styles.expenseCategoryIcon}>{exp.icon || '💳'}</span>
-                      <div>
-                        <div className={styles.expenseTitle}>{exp.title}</div>
-                        <div className={styles.expenseSubmeta}>
-                          Paid by {exp.paidBy} • {exp.split} • {exp.date}
+                {sortedExpenses.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '36px 16px', background: '#ffffff', borderRadius: 12, border: '1px dashed #cbd5e1', color: '#64748b' }}>
+                    <p style={{ margin: '0 0 12px', fontSize: 14 }}>No expenses logged yet for this trip.</p>
+                    <button
+                      type="button"
+                      className={styles.addExpenseMainBtn}
+                      onClick={() => setAddExpenseModalOpen(true)}
+                    >
+                      <Plus size={15} />
+                      <span>Log First Expense</span>
+                    </button>
+                  </div>
+                ) : (
+                  sortedExpenses.map((exp) => {
+                    const displayAmt = convertCurrency(exp.amount, exp.currency || baseCurrency, selectedCurrency);
+                    return (
+                      <div key={exp.id} className={styles.expenseItemRow}>
+                        <div className={styles.expenseItemLeft}>
+                          <span className={styles.expenseCategoryIcon}>{exp.icon || '💳'}</span>
+                          <div>
+                            <div className={styles.expenseTitle}>{exp.title}</div>
+                            <div className={styles.expenseSubmeta}>
+                              Paid by {exp.paidBy} • {exp.split} • {exp.date}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                          <span className={styles.expenseAmount}>{formatCurrency(displayAmt, selectedCurrency)}</span>
+                          <button
+                            type="button"
+                            className={styles.iconSmallBtn}
+                            onClick={() => handleDeleteExpense(exp.id)}
+                            title="Delete expense"
+                          >
+                            <Trash2 size={15} color="#ef4444" />
+                          </button>
                         </div>
                       </div>
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                      <span className={styles.expenseAmount}>{formatCurrency(exp.amount)}</span>
-                      <button
-                        type="button"
-                        className={styles.iconSmallBtn}
-                        onClick={() => handleDeleteExpense(exp.id)}
-                        title="Delete expense"
-                      >
-                        <Trash2 size={15} color="#ef4444" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                    );
+                  })
+                )}
               </div>
 
               {/* Add Expense Main Button */}
-              <button
-                type="button"
-                className={styles.addExpenseMainBtn}
-                onClick={() => setAddExpenseModalOpen(true)}
-              >
-                <Plus size={15} />
-                <span>Add expense</span>
-              </button>
+              {sortedExpenses.length > 0 && (
+                <button
+                  type="button"
+                  className={styles.addExpenseMainBtn}
+                  onClick={() => setAddExpenseModalOpen(true)}
+                >
+                  <Plus size={15} />
+                  <span>Add expense</span>
+                </button>
+              )}
             </div>
           )}
         </main>
@@ -1014,9 +1240,11 @@ export default function TripPlanningInterface({ params }) {
             <form onSubmit={handleSaveNewExpense} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {/* Amount */}
               <div className={styles.modalFieldGroup}>
-                <label className={styles.modalFieldLabel}>Amount</label>
+                <label className={styles.modalFieldLabel}>Amount ({selectedCurrency})</label>
                 <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #cbd5e1', borderRadius: 8, padding: '8px 12px' }}>
-                  <span style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', marginRight: 6 }}>₹</span>
+                  <span style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', marginRight: 6 }}>
+                    {CURRENCIES.find((c) => c.code === selectedCurrency)?.symbol || '$'}
+                  </span>
                   <input
                     type="number"
                     placeholder="0.00"
@@ -1156,6 +1384,115 @@ export default function TripPlanningInterface({ params }) {
                 ))}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: Manual Add Place / Activity Modal */}
+      {manualPlaceModal.isOpen && (
+        <div className={styles.modalBackdrop} onClick={() => setManualPlaceModal({ isOpen: false, targetDay: 1 })}>
+          <div className={`${styles.modalCard} ${styles.manualPlaceModal}`} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3 className={styles.modalTitle}>Add Place to Day {manualPlaceModal.targetDay}</h3>
+              <button
+                type="button"
+                className={styles.modalCloseBtn}
+                onClick={() => setManualPlaceModal({ isOpen: false, targetDay: 1 })}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmManualPlace} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div className={styles.modalFieldGroup}>
+                <label className={styles.modalFieldLabel}>Place / Activity Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Shaniwar Wada Fort, Seaside Sunset Cafe..."
+                  value={manualPlaceForm.name}
+                  onChange={(e) => setManualPlaceForm({ ...manualPlaceForm, name: e.target.value })}
+                  className={styles.manualInput}
+                  autoFocus
+                />
+              </div>
+
+              <div className={styles.manualFieldRow}>
+                <div className={styles.modalFieldGroup}>
+                  <label className={styles.modalFieldLabel}>Category</label>
+                  <select
+                    value={manualPlaceForm.category}
+                    onChange={(e) => setManualPlaceForm({ ...manualPlaceForm, category: e.target.value })}
+                    className={styles.manualSelect}
+                  >
+                    <option value="Sightseeing">Sightseeing</option>
+                    <option value="Heritage">Heritage</option>
+                    <option value="Culture">Culture</option>
+                    <option value="Food">Food & Dining</option>
+                    <option value="Beach">Beach & Coastal</option>
+                    <option value="Adventure">Adventure & Trek</option>
+                    <option value="Shopping">Shopping & Market</option>
+                    <option value="Relaxation">Relaxation</option>
+                    <option value="Transport">Transport</option>
+                    <option value="Stay">Stay / Hotel</option>
+                  </select>
+                </div>
+
+                <div className={styles.modalFieldGroup}>
+                  <label className={styles.modalFieldLabel}>Scheduled Time</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 10:00 AM, 02:30 PM"
+                    value={manualPlaceForm.time}
+                    onChange={(e) => setManualPlaceForm({ ...manualPlaceForm, time: e.target.value })}
+                    className={styles.manualInput}
+                  />
+                </div>
+              </div>
+
+              <div className={styles.manualFieldRow}>
+                <div className={styles.modalFieldGroup}>
+                  <label className={styles.modalFieldLabel}>Duration (minutes)</label>
+                  <input
+                    type="number"
+                    min="10"
+                    step="10"
+                    placeholder="90"
+                    value={manualPlaceForm.duration}
+                    onChange={(e) => setManualPlaceForm({ ...manualPlaceForm, duration: e.target.value })}
+                    className={styles.manualInput}
+                  />
+                </div>
+
+                <div className={styles.modalFieldGroup}>
+                  <label className={styles.modalFieldLabel}>Estimated Cost ({selectedCurrency})</label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                    value={manualPlaceForm.cost}
+                    onChange={(e) => setManualPlaceForm({ ...manualPlaceForm, cost: e.target.value })}
+                    className={styles.manualInput}
+                  />
+                </div>
+              </div>
+
+              <div className={styles.modalFieldGroup}>
+                <label className={styles.modalFieldLabel}>Location / Landmark</label>
+                <input
+                  type="text"
+                  placeholder={`e.g. ${currentCityInfo.name} Center`}
+                  value={manualPlaceForm.location}
+                  onChange={(e) => setManualPlaceForm({ ...manualPlaceForm, location: e.target.value })}
+                  className={styles.manualInput}
+                />
+              </div>
+
+              <button type="submit" className={styles.manualSubmitBtn}>
+                <Plus size={16} />
+                <span>Add Place to Day {manualPlaceModal.targetDay}</span>
+              </button>
+            </form>
           </div>
         </div>
       )}

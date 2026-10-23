@@ -19,7 +19,7 @@ import PageContainer from '@/components/layout/PageContainer';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import { tripService, budgetService } from '@/lib/services';
-import { formatCurrency } from '@/lib/utils/formatters';
+import { formatCurrency, CURRENCIES, convertCurrency } from '@/lib/utils/formatters';
 import styles from './budget.module.css';
 
 export default function BudgetPage({ params }) {
@@ -29,6 +29,7 @@ export default function BudgetPage({ params }) {
   const [trip, setTrip] = useState(null);
   const [budgetData, setBudgetData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selectedCurrency, setSelectedCurrency] = useState('USD');
 
   // What-If Simulation toggled activities (excluded activity IDs)
   const [excludedActivityIds, setExcludedActivityIds] = useState(new Set());
@@ -42,6 +43,17 @@ export default function BudgetPage({ params }) {
         ]);
         setTrip(loadedTrip);
         setBudgetData(loadedBudget);
+
+        if (typeof window !== 'undefined') {
+          try {
+            const savedCurr = localStorage.getItem(`gt_pref_curr_${tripId}`);
+            if (savedCurr) {
+              setSelectedCurrency(savedCurr);
+            } else if (loadedTrip?.currency) {
+              setSelectedCurrency(loadedTrip.currency);
+            }
+          } catch (e) { }
+        }
       } catch (err) {
         console.error('Failed to load budget data', err);
       } finally {
@@ -51,12 +63,27 @@ export default function BudgetPage({ params }) {
     loadData();
   }, [tripId]);
 
+  const handleCurrencyChange = (newCurr) => {
+    setSelectedCurrency(newCurr);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(`gt_pref_curr_${tripId}`, newCurr);
+      } catch (e) { }
+    }
+  };
+
+  const baseCurrency = trip?.currency || 'USD';
+  const formatInCurr = (val) => {
+    const converted = convertCurrency(val, baseCurrency, selectedCurrency);
+    return formatCurrency(converted, selectedCurrency);
+  };
+
   // Recalculate totals based on simulation
   const simulationResults = useMemo(() => {
     if (!budgetData) return null;
 
     let simulatedEstimated = 0;
-    const simulatedDaily = budgetData.daily.map((day) => {
+    const simulatedDaily = (budgetData.daily || []).map((day) => {
       // Sum only activities not excluded
       const dayActivities = day.activitiesList || [
         { id: `${day.day}-1`, name: day.activities, cost: day.estimated },
@@ -74,9 +101,9 @@ export default function BudgetPage({ params }) {
       };
     });
 
-    const totalBudget = trip?.budget || budgetData.total || 1200;
+    const totalBudget = trip?.budget || budgetData.total || 0;
     const remaining = totalBudget - simulatedEstimated;
-    const percentUsed = Math.min(Math.round((simulatedEstimated / totalBudget) * 100), 100);
+    const percentUsed = totalBudget > 0 ? Math.min(Math.round((simulatedEstimated / totalBudget) * 100), 100) : 0;
 
     return {
       totalBudget,
@@ -131,7 +158,30 @@ export default function BudgetPage({ params }) {
           <div className={styles.tripHeading}>{trip.title} — Budget Dashboard</div>
         </div>
 
-        <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          {/* Multi-Currency Options Pill Bar */}
+          <div className={styles.currencySelectorRow}>
+            <span className={styles.currencyLabel}>Currency:</span>
+            <div className={styles.currencyChips}>
+              {CURRENCIES.map((curr) => {
+                const active = selectedCurrency === curr.code;
+                return (
+                  <button
+                    key={curr.code}
+                    type="button"
+                    className={`${styles.currencyChip} ${active ? styles.currencyChipActive : ''}`}
+                    onClick={() => handleCurrencyChange(curr.code)}
+                    title={`${curr.name} (${curr.symbol})`}
+                  >
+                    <span>{curr.flag}</span>
+                    <span>{curr.code}</span>
+                    <span style={{ opacity: 0.8 }}>({curr.symbol})</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <Link href={`/budget/${trip.id}/compare`} style={{ textDecoration: 'none' }}>
             <Button variant="primary" size="sm">
               <Layers size={14} />
@@ -147,8 +197,8 @@ export default function BudgetPage({ params }) {
           {/* Card 1: Estimated Spend */}
           <div className={styles.statCard}>
             <div className={styles.statLabel}>Total Estimated Spend</div>
-            <div className={styles.statValue}>{formatCurrency(simulatedEstimated)}</div>
-            <div className={styles.statSubtext}>of {formatCurrency(totalBudget)} total budget ({percentUsed}%)</div>
+            <div className={styles.statValue}>{formatInCurr(simulatedEstimated)}</div>
+            <div className={styles.statSubtext}>of {formatInCurr(totalBudget)} total budget ({percentUsed}%)</div>
             <div style={{ height: 6, background: 'var(--gt-bg-alt)', borderRadius: 10, marginTop: 8, overflow: 'hidden' }}>
               <div
                 style={{
@@ -168,7 +218,7 @@ export default function BudgetPage({ params }) {
               className={styles.statValue}
               style={{ color: isUnderBudget ? 'var(--gt-success)' : 'var(--gt-error)' }}
             >
-              {isUnderBudget ? formatCurrency(remaining) : `-${formatCurrency(Math.abs(remaining))}`}
+              {isUnderBudget ? formatInCurr(remaining) : `-${formatInCurr(Math.abs(remaining))}`}
             </div>
             <div className={styles.statSubtext} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               {isUnderBudget ? (
@@ -189,7 +239,7 @@ export default function BudgetPage({ params }) {
           <div className={styles.statCard}>
             <div className={styles.statLabel}>Daily Pacing</div>
             <div className={styles.statValue}>
-              {formatCurrency(simulatedEstimated / Math.max(simulatedDaily.length, 1))}
+              {formatInCurr(simulatedDaily.length > 0 ? (simulatedEstimated / simulatedDaily.length) : 0)}
               <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--gt-text-muted)' }}>/day</span>
             </div>
             <div className={styles.statSubtext}>
@@ -203,33 +253,39 @@ export default function BudgetPage({ params }) {
           {/* Category Breakdown */}
           <div className={styles.chartCard}>
             <h3 className={styles.cardTitle}>Category Spending Breakdown</h3>
-            <div className={styles.catList}>
-              {budgetData.categories.map((cat) => {
-                const percent = Math.round((cat.amount / budgetData.estimated) * 100);
-                return (
-                  <div key={cat.name} className={styles.catRow}>
-                    <div className={styles.catMeta}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span
-                          style={{ width: 10, height: 10, borderRadius: '50%', background: cat.color }}
+            {budgetData.categories.length === 0 ? (
+              <p style={{ color: 'var(--gt-text-muted)', fontSize: 13, margin: '20px 0' }}>
+                No categorized expenses or activities recorded yet.
+              </p>
+            ) : (
+              <div className={styles.catList}>
+                {budgetData.categories.map((cat) => {
+                  const percent = budgetData.estimated > 0 ? Math.round((cat.amount / budgetData.estimated) * 100) : 0;
+                  return (
+                    <div key={cat.name} className={styles.catRow}>
+                      <div className={styles.catMeta}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span
+                            style={{ width: 10, height: 10, borderRadius: '50%', background: cat.color }}
+                          />
+                          <strong>{cat.name}</strong>
+                        </span>
+                        <span>
+                          <strong>{formatInCurr(cat.amount)}</strong>{' '}
+                          <span style={{ color: 'var(--gt-text-muted)', fontSize: 12 }}>({percent}%)</span>
+                        </span>
+                      </div>
+                      <div className={styles.catBarTrack}>
+                        <div
+                          className={styles.catBarFill}
+                          style={{ width: `${percent}%`, background: cat.color }}
                         />
-                        <strong>{cat.name}</strong>
-                      </span>
-                      <span>
-                        <strong>{formatCurrency(cat.amount)}</strong>{' '}
-                        <span style={{ color: 'var(--gt-text-muted)', fontSize: 12 }}>({percent}%)</span>
-                      </span>
+                      </div>
                     </div>
-                    <div className={styles.catBarTrack}>
-                      <div
-                        className={styles.catBarFill}
-                        style={{ width: `${percent}%`, background: cat.color }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* What-If Simulation Helper Note */}
@@ -258,7 +314,7 @@ export default function BudgetPage({ params }) {
                   <strong>{excludedActivityIds.size} activities currently paused.</strong>
                   <br />
                   Estimated savings:{' '}
-                  {formatCurrency(budgetData.estimated - simulatedEstimated)}
+                  {formatInCurr(budgetData.estimated - simulatedEstimated)}
                 </div>
               )}
             </div>
@@ -294,52 +350,64 @@ export default function BudgetPage({ params }) {
               </tr>
             </thead>
             <tbody>
-              {simulatedDaily.map((day) => {
-                const isOverDailyLimit = day.activeCost > 180;
-                return (
-                  <tr key={day.day} className={isOverDailyLimit ? styles.rowAlert : ''}>
-                    <td className={styles.td}>
-                      <strong>Day {day.day}</strong>
-                    </td>
-                    <td className={styles.td}>{day.date}</td>
-                    <td className={styles.td}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        {day.dayActivities.map((act) => {
-                          const isExcluded = excludedActivityIds.has(act.id);
-                          return (
-                            <label
-                              key={act.id}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 8,
-                                cursor: 'pointer',
-                                textDecoration: isExcluded ? 'line-through' : 'none',
-                                color: isExcluded ? 'var(--gt-text-muted)' : 'inherit',
-                                fontSize: 13,
-                              }}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={!isExcluded}
-                                onChange={() => toggleExcludeActivity(act.id)}
-                                style={{ accentColor: 'var(--gt-blue)' }}
-                              />
-                              <span>{act.name}</span>
-                              <span style={{ color: 'var(--gt-text-muted)', fontSize: 11 }}>
-                                ({formatCurrency(act.cost)})
-                              </span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    </td>
-                    <td className={`${styles.td} ${styles.tdCost}`} style={{ textAlign: 'right' }}>
-                      {formatCurrency(day.activeCost)}
-                    </td>
-                  </tr>
-                );
-              })}
+              {simulatedDaily.length === 0 ? (
+                <tr>
+                  <td colSpan={4} style={{ textAlign: 'center', padding: '30px', color: 'var(--gt-text-muted)', fontSize: 13 }}>
+                    No activities scheduled yet. Add places to your days in the Itinerary or Canvas playground to track daily costs.
+                  </td>
+                </tr>
+              ) : (
+                simulatedDaily.map((day) => {
+                  const isOverDailyLimit = day.activeCost > 180;
+                  return (
+                    <tr key={day.day} className={isOverDailyLimit ? styles.rowAlert : ''}>
+                      <td className={styles.td}>
+                        <strong>Day {day.day}</strong>
+                      </td>
+                      <td className={styles.td}>{day.date}</td>
+                      <td className={styles.td}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          {day.dayActivities.length === 0 ? (
+                            <span style={{ color: 'var(--gt-text-muted)', fontSize: 12 }}>No activities added for this day</span>
+                          ) : (
+                            day.dayActivities.map((act) => {
+                              const isExcluded = excludedActivityIds.has(act.id);
+                              return (
+                                <label
+                                  key={act.id}
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 8,
+                                    cursor: 'pointer',
+                                    textDecoration: isExcluded ? 'line-through' : 'none',
+                                    color: isExcluded ? 'var(--gt-text-muted)' : 'inherit',
+                                    fontSize: 13,
+                                  }}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={!isExcluded}
+                                    onChange={() => toggleExcludeActivity(act.id)}
+                                    style={{ accentColor: 'var(--gt-blue)' }}
+                                  />
+                                  <span>{act.name}</span>
+                                  <span style={{ color: 'var(--gt-text-muted)', fontSize: 11 }}>
+                                    ({formatInCurr(act.cost)})
+                                  </span>
+                                </label>
+                              );
+                            })
+                          )}
+                        </div>
+                      </td>
+                      <td className={`${styles.td} ${styles.tdCost}`} style={{ textAlign: 'right' }}>
+                        {formatInCurr(day.activeCost)}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>

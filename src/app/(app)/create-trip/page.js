@@ -20,7 +20,7 @@ import Header from '@/components/layout/Header';
 import { mockCities } from '@/lib/data/mockCities';
 import citiesData from '@/lib/data/citiesData.json';
 import { tripService, playgroundService, itineraryService } from '@/lib/services';
-import { generateSynchronizedTripPlan } from '@/lib/services/tripGenerator';
+import { generateBlankManualTripPlan } from '@/lib/services/tripGenerator';
 import styles from './create-trip.module.css';
 
 export default function CreateTripPage() {
@@ -131,8 +131,8 @@ export default function CreateTripPage() {
         tripmates,
       });
 
-      // 2. Generate Synchronized Day-Wise Itinerary & Map Nodes
-      const plan = generateSynchronizedTripPlan({
+      // 2. Generate Structured Blank Itinerary Days & Base Canvas Nodes for Manual Planning
+      const plan = generateBlankManualTripPlan({
         tripId: newTrip.id,
         startLocation: `${chosenDest}, India`,
         destinations: [chosenDest],
@@ -141,7 +141,6 @@ export default function CreateTripPage() {
         startDate,
         endDate,
         travelers: Number(travelers) || 2,
-        preferences: ['Culture', 'Sightseeing', 'Food'],
       });
 
       // 3. Persist Itinerary and Nodes
@@ -150,7 +149,7 @@ export default function CreateTripPage() {
         itineraryService.saveItinerary(newTrip.id, plan.itineraryDays),
       ]);
 
-      // 4. Open Main Trip Planning Interface as specified by the PDF
+      // 4. Open Main Trip Planning Interface
       router.push(`/itinerary/${newTrip.id}`);
     } catch (err) {
       console.error('Failed to create trip', err);
