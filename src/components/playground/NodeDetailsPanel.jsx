@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   X,
   MapPin,
@@ -16,14 +16,19 @@ import {
   Sparkles,
   Save,
   CheckCircle2,
+  Link2,
+  Image as ImageIcon,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
-import { CATEGORIES } from './playgroundTypes';
+import { CATEGORIES, STOCK_TRAVEL_IMAGES } from './playgroundTypes';
 import styles from './playground.module.css';
 
 export default function NodeDetailsPanel({
   selectedNode,
-  allNodes,
+  allNodes = [],
+  links = [],
+  onCreateLink,
+  onDeleteLink,
   onClose,
   onUpdateNode,
   onOpenReplace,
@@ -40,6 +45,10 @@ export default function NodeDetailsPanel({
   const [estimatedCost, setEstimatedCost] = useState(0);
   const [category, setCategory] = useState('');
   const [notes, setNotes] = useState('');
+  const [selectedImage, setSelectedImage] = useState('');
+  const [showImagePicker, setShowImagePicker] = useState(false);
+  const [imageCategoryFilter, setImageCategoryFilter] = useState('All');
+  const [connectTargetId, setConnectTargetId] = useState('');
   const [isSavedRecently, setIsSavedRecently] = useState(false);
 
   // Sync form state when selected node changes
@@ -52,6 +61,8 @@ export default function NodeDetailsPanel({
       setEstimatedCost(selectedNode.estimatedCost || 0);
       setCategory(selectedNode.category || 'Sightseeing');
       setNotes(selectedNode.notes || '');
+      setSelectedImage(selectedNode.image || '');
+      setShowImagePicker(false);
       setIsSavedRecently(false);
     }
   }, [selectedNode?.id]);
@@ -74,6 +85,34 @@ export default function NodeDetailsPanel({
   const canMoveEarlier = siblingIndex > 0;
   const canMoveLater = siblingIndex < siblings.length - 1;
 
+  // Connected links for this stop
+  const connectedLinks = useMemo(() => {
+    return (links || []).filter(
+      (l) => l.source === selectedNode.id || l.target === selectedNode.id
+    );
+  }, [links, selectedNode.id]);
+
+  // Candidates available to link with
+  const availableToLink = useMemo(() => {
+    return allNodes.filter((n) => {
+      if (n.id === selectedNode.id) return false;
+      const alreadyLinked = (links || []).some(
+        (l) =>
+          (l.source === selectedNode.id && l.target === n.id) ||
+          (l.source === n.id && l.target === selectedNode.id)
+      );
+      return !alreadyLinked;
+    });
+  }, [allNodes, selectedNode.id, links]);
+
+  // Filtered stock images
+  const filteredStockImages = useMemo(() => {
+    if (imageCategoryFilter === 'All') return STOCK_TRAVEL_IMAGES;
+    return STOCK_TRAVEL_IMAGES.filter(
+      (img) => img.category.toLowerCase() === imageCategoryFilter.toLowerCase()
+    );
+  }, [imageCategoryFilter]);
+
   const handleSave = (e) => {
     if (e) e.preventDefault();
     if (!title.trim()) return;
@@ -86,10 +125,17 @@ export default function NodeDetailsPanel({
       estimatedCost: Number(estimatedCost) || 0,
       category,
       notes: notes.trim(),
+      image: selectedImage,
     });
 
     setIsSavedRecently(true);
     setTimeout(() => setIsSavedRecently(false), 1500);
+  };
+
+  const handleCreateConnection = () => {
+    if (!connectTargetId) return;
+    onCreateLink?.(selectedNode.id, connectTargetId);
+    setConnectTargetId('');
   };
 
   return (
@@ -129,16 +175,189 @@ export default function NodeDetailsPanel({
 
       {/* Main Scrollable Body */}
       <div className={styles.detailsBody}>
-        {/* Cover Photo */}
-        {selectedNode.image && (
-          <div className={styles.detailsImageWrapper}>
+        {/* Cover Photo with Stock Photo Change Option */}
+        <div className={styles.detailsImageWrapper} style={{ position: 'relative' }}>
+          {selectedImage ? (
             <img
-              src={selectedNode.image}
+              src={selectedImage}
               alt={selectedNode.title}
               className={styles.detailsImage}
             />
+          ) : (
+            <div
+              style={{
+                height: 120,
+                background: '#f1f5f9',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#94a3b8',
+                fontSize: 12,
+              }}
+            >
+              No photo selected
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setShowImagePicker((prev) => !prev)}
+            style={{
+              position: 'absolute',
+              bottom: 8,
+              right: 8,
+              background: 'rgba(15, 23, 42, 0.85)',
+              backdropFilter: 'blur(4px)',
+              color: '#ffffff',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              borderRadius: '9999px',
+              padding: '4px 10px',
+              fontSize: '11px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+            }}
+          >
+            <ImageIcon size={12} />
+            <span>{showImagePicker ? 'Close Gallery' : 'Choose Stock Photo'}</span>
+          </button>
+        </div>
+
+        {/* Stock Photo Gallery Selector */}
+        {showImagePicker && (
+          <div className={styles.stockImagePickerContainer}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#0f172a', marginBottom: 6 }}>
+              Select Travel Stock Image
+            </div>
+            <div className={styles.stockImageCategoryTabs}>
+              {['All', 'Beach', 'Heritage', 'Nature', 'Food', 'City', 'Adventure'].map((cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  className={`${styles.stockCategoryTab} ${imageCategoryFilter === cat ? styles.stockCategoryTabActive : ''}`}
+                  onClick={() => setImageCategoryFilter(cat)}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+
+            <div className={styles.stockImageGrid}>
+              {filteredStockImages.map((img) => (
+                <div
+                  key={img.id}
+                  className={`${styles.stockImageCard} ${selectedImage === img.url ? styles.stockImageCardActive : ''}`}
+                  onClick={() => {
+                    setSelectedImage(img.url);
+                    onUpdateNode(selectedNode.id, { image: img.url });
+                  }}
+                  title={img.title}
+                >
+                  <img src={img.thumbnail} alt={img.title} />
+                  <span className={styles.stockImageLabel}>{img.title}</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
+
+        {/* Interactive Connections / Linking Section */}
+        <div style={{
+          marginTop: 12,
+          padding: 10,
+          background: '#f8fafc',
+          border: '1px solid var(--gt-border, #e2e8f0)',
+          borderRadius: 8,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 5 }}>
+              <Link2 size={13} color="#2563eb" />
+              <span>Connected Stops ({connectedLinks.length})</span>
+            </span>
+          </div>
+
+          {connectedLinks.length === 0 ? (
+            <div style={{ fontSize: 11, color: '#94a3b8', fontStyle: 'italic', marginBottom: 8 }}>
+              No stops linked yet. Connect from canvas ports or select a stop below.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 8 }}>
+              {connectedLinks.map((link) => {
+                const isSource = link.source === selectedNode.id;
+                const otherId = isSource ? link.target : link.source;
+                const otherNode = allNodes.find((n) => n.id === otherId);
+
+                return (
+                  <div
+                    key={link.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      background: '#ffffff',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: 6,
+                      padding: '4px 8px',
+                      fontSize: 11,
+                    }}
+                  >
+                    <span style={{ color: '#334155', fontWeight: 500 }}>
+                      {isSource ? '➔ Leads to: ' : '⬅ Comes from: '}
+                      <strong>{otherNode?.title || 'Unknown Stop'}</strong>
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() => onDeleteLink?.(link.id)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#ef4444',
+                        cursor: 'pointer',
+                        fontSize: 11,
+                        padding: '2px 4px',
+                        fontWeight: 600,
+                      }}
+                      title="Unlink this connection"
+                    >
+                      ✕ Unlink
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Quick inline connector */}
+          {availableToLink.length > 0 && (
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <select
+                className={styles.formSelect}
+                value={connectTargetId}
+                onChange={(e) => setConnectTargetId(e.target.value)}
+                style={{ fontSize: 11, padding: '4px 8px', height: 28, flex: 1 }}
+              >
+                <option value="">+ Connect with another stop...</option>
+                {availableToLink.map((target) => (
+                  <option key={target.id} value={target.id}>
+                    {target.title} ({target.type})
+                  </option>
+                ))}
+              </select>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleCreateConnection}
+                disabled={!connectTargetId}
+                style={{ height: 28, fontSize: 11, padding: '0 8px' }}
+              >
+                Link
+              </Button>
+            </div>
+          )}
+        </div>
 
         {/* Modern Inspector Action Toolbar */}
         <div className={styles.inspectorActionsCard}>

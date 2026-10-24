@@ -380,6 +380,26 @@ export const playgroundService = {
     } catch (e) { }
     return nodes;
   },
+  async getLinks(tripId) {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem(`gt_links_${tripId}`);
+        if (stored) return JSON.parse(stored);
+      } catch (e) { }
+    }
+    return [];
+  },
+  async saveLinks(tripId, links) {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(`gt_links_${tripId}`, JSON.stringify(links));
+      } catch (e) { }
+    }
+    try {
+      await setDoc(doc(db, 'playground_links', tripId), { links }, { merge: true });
+    } catch (e) { }
+    return links;
+  },
 };
 
 export const budgetService = {

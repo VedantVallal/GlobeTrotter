@@ -770,7 +770,7 @@ export default function TripPlanningInterface({ params }) {
 
               {/* Filter category pills */}
               <div className={styles.exploreFilterPills}>
-                {['All', 'Attractions', 'Food', 'Hotels'].map((cat) => (
+                {['All', 'Attractions', 'Food', 'Culture'].map((cat) => (
                   <button
                     key={cat}
                     type="button"
@@ -826,23 +826,23 @@ export default function TripPlanningInterface({ params }) {
                   </div>
                 </div>
 
-                {/* 3. Search hotels */}
+                {/* 3. Scenic Viewpoints & Experiences */}
                 <div className={styles.exploreCuratedCard}>
                   <img
-                    src="https://images.unsplash.com/photo-1566073771259-6a8506099945?w=500&fit=crop"
-                    alt="Search hotels"
+                    src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=500&fit=crop"
+                    alt="Scenic Viewpoints"
                     className={styles.exploreCuratedCardImg}
                   />
                   <div className={styles.exploreCuratedCardBody}>
-                    <span className={styles.exploreCardTag}>Hotels & Stays</span>
-                    <div className={styles.exploreCardTitle}>Search hotels with transparent pricing</div>
+                    <span className={styles.exploreCardTag}>Scenic & Nature</span>
+                    <div className={styles.exploreCardTitle}>Panoramic viewpoints & sunset spots in {destinationName}</div>
                     <button
                       type="button"
                       className={styles.exploreCardBtn}
-                      onClick={() => handleAddPlaceToDay({ name: `${destinationName} Heritage Boutique Resort`, category: 'Stay', price: 3200 }, 1)}
+                      onClick={() => handleAddPlaceToDay({ name: `Sunset Panoramic Lookout in ${destinationName}`, category: 'Sightseeing', price: 150 }, 1)}
                     >
                       <Plus size={13} />
-                      <span>Add Lodging</span>
+                      <span>Add to Day 1</span>
                     </button>
                   </div>
                 </div>
@@ -918,20 +918,6 @@ export default function TripPlanningInterface({ params }) {
                     <span style={{ fontSize: 12, fontWeight: 700, color: '#64748b', background: '#f1f5f9', padding: '4px 8px', borderRadius: 6 }}>
                       Day {dayItem.day}
                     </span>
-                  </div>
-
-                  {/* Lodging Reminder Card */}
-                  <div className={styles.lodgingReminderBox}>
-                    <span className={styles.lodgingText}>
-                      Looks like you don't have lodging for {formatDate(dayItem.date, 'MMM d')}
-                    </span>
-                    <button
-                      type="button"
-                      className={styles.searchHotelsBtn}
-                      onClick={() => handleAddPlaceToDay({ name: `Stay at ${destinationName} Center`, category: 'Stay', price: 2800 }, dayItem.day)}
-                    >
-                      Search hotels
-                    </button>
                   </div>
 
                   {/* Activities List */}

@@ -585,3 +585,133 @@ export function resolveNodeGeo(node, allNodes = []) {
   return { lat: 18.922, lng: 72.8347 };
 }
 
+// Diverse, high-resolution stock travel photography library
+export const STOCK_TRAVEL_IMAGES = [
+  {
+    id: 'stock-beach-1',
+    category: 'Beach',
+    title: 'Tropical Turquoise Coastline',
+    url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&fit=crop',
+    thumbnail: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=200&h=140&fit=crop',
+  },
+  {
+    id: 'stock-beach-2',
+    category: 'Beach',
+    title: 'Palm Trees & Golden Shore',
+    url: 'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?w=800&fit=crop',
+    thumbnail: 'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?w=200&h=140&fit=crop',
+  },
+  {
+    id: 'stock-beach-3',
+    category: 'Beach',
+    title: 'Sunset Surf & Ocean Waves',
+    url: 'https://images.unsplash.com/photo-1519046904884-53103b34b206?w=800&fit=crop',
+    thumbnail: 'https://images.unsplash.com/photo-1519046904884-53103b34b206?w=200&h=140&fit=crop',
+  },
+  {
+    id: 'stock-heritage-1',
+    category: 'Heritage',
+    title: 'Historic Stone Fortress & Ramparts',
+    url: 'https://images.unsplash.com/photo-1590050752117-238cb0fb12b1?w=800&fit=crop',
+    thumbnail: 'https://images.unsplash.com/photo-1590050752117-238cb0fb12b1?w=200&h=140&fit=crop',
+  },
+  {
+    id: 'stock-heritage-2',
+    category: 'Heritage',
+    title: 'Royal Palace Architecture',
+    url: 'https://images.unsplash.com/photo-1587474260584-136574528ed5?w=800&fit=crop',
+    thumbnail: 'https://images.unsplash.com/photo-1587474260584-136574528ed5?w=200&h=140&fit=crop',
+  },
+  {
+    id: 'stock-heritage-3',
+    category: 'Heritage',
+    title: 'Ancient Rock-Cut Temple Caves',
+    url: 'https://images.unsplash.com/photo-1600100397608-f010e421a172?w=800&fit=crop',
+    thumbnail: 'https://images.unsplash.com/photo-1600100397608-f010e421a172?w=200&h=140&fit=crop',
+  },
+  {
+    id: 'stock-nature-1',
+    category: 'Nature',
+    title: 'Panoramic Alpine Valley & Vista',
+    url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&fit=crop',
+    thumbnail: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=200&h=140&fit=crop',
+  },
+  {
+    id: 'stock-nature-2',
+    category: 'Nature',
+    title: 'Majestic Mountain Ridge & Sunrise',
+    url: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&fit=crop',
+    thumbnail: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=200&h=140&fit=crop',
+  },
+  {
+    id: 'stock-nature-3',
+    category: 'Nature',
+    title: 'Cascading Forest Waterfall',
+    url: 'https://images.unsplash.com/photo-1433086966358-54859d0ed716?w=800&fit=crop',
+    thumbnail: 'https://images.unsplash.com/photo-1433086966358-54859d0ed716?w=200&h=140&fit=crop',
+  },
+  {
+    id: 'stock-food-1',
+    category: 'Food',
+    title: 'Authentic Local Gourmet Platter',
+    url: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&fit=crop',
+    thumbnail: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=200&h=140&fit=crop',
+  },
+  {
+    id: 'stock-food-2',
+    category: 'Food',
+    title: 'Traditional Spices & Regional Cuisine',
+    url: 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=800&fit=crop',
+    thumbnail: 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=200&h=140&fit=crop',
+  },
+  {
+    id: 'stock-food-3',
+    category: 'Food',
+    title: 'Cozy Cafe & Artisan Coffee',
+    url: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&fit=crop',
+    thumbnail: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=200&h=140&fit=crop',
+  },
+  {
+    id: 'stock-city-1',
+    category: 'City',
+    title: 'Modern Metropolis Skyline & Lights',
+    url: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&fit=crop',
+    thumbnail: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=200&h=140&fit=crop',
+  },
+  {
+    id: 'stock-city-2',
+    category: 'City',
+    title: 'European Boulevards & Landmarks',
+    url: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800&fit=crop',
+    thumbnail: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=200&h=140&fit=crop',
+  },
+  {
+    id: 'stock-city-3',
+    category: 'City',
+    title: 'Vibrant Nightlife Promenade',
+    url: 'https://images.unsplash.com/photo-1514565131-fce0801e5785?w=800&fit=crop',
+    thumbnail: 'https://images.unsplash.com/photo-1514565131-fce0801e5785?w=200&h=140&fit=crop',
+  },
+  {
+    id: 'stock-adventure-1',
+    category: 'Adventure',
+    title: 'Scenic Hiking & Trekking Trail',
+    url: 'https://images.unsplash.com/photo-1533240332313-0db49b459ad6?w=800&fit=crop',
+    thumbnail: 'https://images.unsplash.com/photo-1533240332313-0db49b459ad6?w=200&h=140&fit=crop',
+  },
+  {
+    id: 'stock-adventure-2',
+    category: 'Adventure',
+    title: 'Ocean Diving & Marine Life',
+    url: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&fit=crop',
+    thumbnail: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=200&h=140&fit=crop',
+  },
+  {
+    id: 'stock-adventure-3',
+    category: 'Adventure',
+    title: 'Hot Air Balloon over Valley',
+    url: 'https://images.unsplash.com/photo-1503220317375-aaad61436b1b?w=800&fit=crop',
+    thumbnail: 'https://images.unsplash.com/photo-1503220317375-aaad61436b1b?w=200&h=140&fit=crop',
+  },
+];
+

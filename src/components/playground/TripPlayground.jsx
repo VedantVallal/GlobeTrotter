@@ -47,11 +47,12 @@ export default function TripPlayground({ trip, initialNodes = null }) {
 
   // Nodes state
   const [nodes, setNodes] = useState([]);
+  const [links, setLinks] = useState([]);
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const [copilotInitialPrompt, setCopilotInitialPrompt] = useState('');
   const [saveStatus, setSaveStatus] = useState('Saved');
 
-  // Undo / Redo History Stack (bounded to 25 snapshots)
+  // Undo / Redo History Stack (bounded to 25 snapshots of { nodes, links })
   const [history, setHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const isUndoRedoActionRef = useRef(false);
@@ -82,45 +83,51 @@ export default function TripPlayground({ trip, initialNodes = null }) {
     toastTimerRef.current = setTimeout(() => setToast(null), 4500);
   };
 
-  // Initialize nodes from props, storage, or default hierarchy
+  // Initialize nodes and links: user-driven, clear canvas by default!
   useEffect(() => {
     async function init() {
       let loaded = initialNodes;
       if (!loaded || loaded.length === 0) {
         const stored = await playgroundService.getNodes(tripId);
-        if (stored && Array.isArray(stored) && stored.length > 0) {
+        const isOldPredeterminedTemplate =
+          stored &&
+          stored.some(
+            (n) => n.id === 'node-city-goa' || n.id === 'node-dest-baga' || n.id === 'node-city-1'
+          );
+        if (stored && Array.isArray(stored) && stored.length > 0 && !isOldPredeterminedTemplate) {
           loaded = stored;
         } else {
-          // If trip has custom startLocation / destinations, dynamically generate synchronized plan
-          if (trip && (trip.destinations?.length > 0 || trip.startLocation)) {
-            const plan = generateSynchronizedTripPlan({
-              tripId,
-              startLocation: trip.startLocation || 'Mumbai, India',
-              destinations: trip.destinations || ['Goa'],
-              budget: trip.budget || 50000,
-              currency: trip.currency || 'INR',
-              startDate: trip.startDate || '2026-11-10',
-              endDate: trip.endDate || '2026-11-15',
-              travelers: trip.travelers || 2,
-              preferences: trip.preferences || ['Beach', 'Culture'],
-            });
-            loaded = plan.nodes;
-            playgroundService.saveNodes(tripId, loaded);
-            itineraryService.saveItinerary(tripId, plan.itineraryDays);
-          } else {
-            loaded = createDefaultHierarchicalNodes(tripId);
-          }
+          // Keep playground clear and totally user-driven
+          loaded = [];
+          playgroundService.saveNodes(tripId, []);
         }
       }
       setNodes(loaded);
-      setHistory([loaded]);
+
+      // Load or discover connections/links
+      let loadedLinks = await playgroundService.getLinks(tripId);
+      if (!loadedLinks || loadedLinks.length === 0) {
+        if (loaded && loaded.length > 0) {
+          loadedLinks = loaded
+            .filter((n) => n.parentId)
+            .map((n) => ({
+              id: `link-${n.parentId}-${n.id}`,
+              source: n.parentId,
+              target: n.id,
+            }));
+        } else {
+          loadedLinks = [];
+        }
+      }
+      setLinks(loadedLinks);
+      setHistory([{ nodes: loaded, links: loadedLinks }]);
       setHistoryIndex(0);
       if (loaded.length > 0) {
         setSelectedNodeId(loaded[0].id);
       }
     }
     init();
-  }, [tripId, trip]);
+  }, [tripId, initialNodes]);
 
   // Persist nodes helper with dynamic two-way sync to itineraryService
   const persistNodes = useCallback(
@@ -171,20 +178,20 @@ export default function TripPlayground({ trip, initialNodes = null }) {
 
   // Push to Undo/Redo history
   const pushHistory = useCallback(
-    (newNodes) => {
+    (newNodes, newLinks = links) => {
       if (isUndoRedoActionRef.current) {
         isUndoRedoActionRef.current = false;
         return;
       }
       setHistory((prev) => {
         const trimmed = prev.slice(0, historyIndex + 1);
-        const updated = [...trimmed, newNodes];
+        const updated = [...trimmed, { nodes: newNodes, links: newLinks }];
         if (updated.length > 25) updated.shift();
         return updated;
       });
       setHistoryIndex((prev) => Math.min(prev + 1, 24));
     },
-    [historyIndex]
+    [historyIndex, links]
   );
 
   // Undo handler
@@ -192,26 +199,34 @@ export default function TripPlayground({ trip, initialNodes = null }) {
     if (historyIndex > 0) {
       isUndoRedoActionRef.current = true;
       const targetIndex = historyIndex - 1;
-      const prevNodes = history[targetIndex];
+      const snapshot = history[targetIndex];
+      const prevNodes = snapshot?.nodes || snapshot || [];
+      const prevLinks = snapshot?.links || [];
       setHistoryIndex(targetIndex);
       setNodes(prevNodes);
+      setLinks(prevLinks);
       persistNodes(prevNodes);
+      playgroundService.saveLinks(tripId, prevLinks);
       showToast('Changes undone');
     }
-  }, [historyIndex, history, persistNodes]);
+  }, [historyIndex, history, persistNodes, tripId]);
 
   // Redo handler
   const handleRedo = useCallback(() => {
     if (historyIndex < history.length - 1) {
       isUndoRedoActionRef.current = true;
       const targetIndex = historyIndex + 1;
-      const nextNodes = history[targetIndex];
+      const snapshot = history[targetIndex];
+      const nextNodes = snapshot?.nodes || snapshot || [];
+      const nextLinks = snapshot?.links || [];
       setHistoryIndex(targetIndex);
       setNodes(nextNodes);
+      setLinks(nextLinks);
       persistNodes(nextNodes);
+      playgroundService.saveLinks(tripId, nextLinks);
       showToast('Changes redone');
     }
-  }, [historyIndex, history, persistNodes]);
+  }, [historyIndex, history, persistNodes, tripId]);
 
   // Keyboard Shortcuts (Ctrl+Z, Ctrl+Shift+Z, Delete, Escape)
   useEffect(() => {
@@ -319,15 +334,16 @@ export default function TripPlayground({ trip, initialNodes = null }) {
     const siblings = nodes.filter((n) => n.parentId === (nodeData.parentId || null));
 
     // Calculate smart canvas position
-    let newX = 100;
-    let newY = 180;
+    let newX = 80;
+    let newY = 80;
     if (parent) {
       newX = parent.x + 320;
       newY = parent.y + siblings.length * 110;
     } else if (siblings.length > 0) {
-      const lastSibling = siblings[siblings.length - 1];
-      newX = lastSibling.x;
-      newY = lastSibling.y + 160;
+      const col = siblings.length % 3;
+      const row = Math.floor(siblings.length / 3);
+      newX = 80 + col * 320;
+      newY = 80 + row * 180;
     }
 
     const newNode = {
@@ -351,9 +367,23 @@ export default function TripPlayground({ trip, initialNodes = null }) {
     };
 
     const updated = [...nodes, newNode];
+    let updatedLinks = links;
+
+    // If added under a parent, create a link automatically
+    if (newNode.parentId) {
+      const autoLink = {
+        id: `link-${newNode.parentId}-${newNode.id}-${Date.now()}`,
+        source: newNode.parentId,
+        target: newNode.id,
+      };
+      updatedLinks = [...links, autoLink];
+      setLinks(updatedLinks);
+      playgroundService.saveLinks(tripId, updatedLinks);
+    }
+
     setNodes(updated);
     setSelectedNodeId(newNode.id);
-    pushHistory(updated);
+    pushHistory(updated, updatedLinks);
     persistNodes(updated);
     showToast(`Added ${newNode.title} to journey`, true);
   };
@@ -362,10 +392,101 @@ export default function TripPlayground({ trip, initialNodes = null }) {
   const handleUpdateNode = (nodeId, fields) => {
     const updated = nodes.map((n) => (n.id === nodeId ? { ...n, ...fields } : n));
     setNodes(updated);
-    pushHistory(updated);
+    pushHistory(updated, links);
     persistNodes(updated);
     showToast(`Updated ${fields.title || 'stop'}`);
   };
+
+  // CREATE LINK / CONNECTION BETWEEN ANY TWO NODES
+  const handleCreateLink = useCallback(
+    (sourceId, targetId) => {
+      if (!sourceId || !targetId || sourceId === targetId) return;
+
+      // Prevent duplicate links
+      const alreadyExists = links.some(
+        (l) =>
+          (l.source === sourceId && l.target === targetId) ||
+          (l.source === targetId && l.target === sourceId)
+      );
+      if (alreadyExists) {
+        showToast('These stops are already connected');
+        return;
+      }
+
+      const sourceNode = nodes.find((n) => n.id === sourceId);
+      const targetNode = nodes.find((n) => n.id === targetId);
+
+      const newLink = {
+        id: `link-${sourceId}-${targetId}-${Date.now()}`,
+        source: sourceId,
+        target: targetId,
+      };
+
+      const updatedLinks = [...links, newLink];
+      setLinks(updatedLinks);
+      playgroundService.saveLinks(tripId, updatedLinks);
+
+      // If target doesn't have parentId, assign source as parent to maintain hierarchical consistency
+      let updatedNodes = nodes;
+      if (targetNode && !targetNode.parentId) {
+        updatedNodes = nodes.map((n) =>
+          n.id === targetId ? { ...n, parentId: sourceId } : n
+        );
+        setNodes(updatedNodes);
+        persistNodes(updatedNodes);
+      }
+
+      pushHistory(updatedNodes, updatedLinks);
+      showToast(`Linked ${sourceNode?.title || 'Stop'} ➔ ${targetNode?.title || 'Stop'}`);
+    },
+    [links, nodes, tripId, persistNodes, pushHistory]
+  );
+
+  // DELETE LINK / CONNECTION
+  const handleDeleteLink = useCallback(
+    (linkId) => {
+      const targetLink = links.find((l) => l.id === linkId);
+      if (!targetLink) return;
+
+      const updatedLinks = links.filter((l) => l.id !== linkId);
+      setLinks(updatedLinks);
+      playgroundService.saveLinks(tripId, updatedLinks);
+
+      // If target node's parentId was source and no other link connects them, clear parentId
+      const stillConnected = updatedLinks.some(
+        (l) => l.source === targetLink.source && l.target === targetLink.target
+      );
+      let updatedNodes = nodes;
+      if (!stillConnected) {
+        updatedNodes = nodes.map((n) =>
+          n.id === targetLink.target && n.parentId === targetLink.source
+            ? { ...n, parentId: null }
+            : n
+        );
+        setNodes(updatedNodes);
+        persistNodes(updatedNodes);
+      }
+
+      pushHistory(updatedNodes, updatedLinks);
+      showToast('Link removed', true);
+    },
+    [links, nodes, tripId, persistNodes, pushHistory]
+  );
+
+  // CLEAR CANVAS: RESET TO COMPLETELY USER-DRIVEN BLANK STATE
+  const handleClearCanvas = useCallback(() => {
+    if (nodes.length === 0) return;
+
+    setNodes([]);
+    setLinks([]);
+    setSelectedNodeId(null);
+    playgroundService.saveNodes(tripId, []);
+    playgroundService.saveLinks(tripId, []);
+    persistNodes([]);
+
+    pushHistory([], []);
+    showToast('Playground cleared. You can build from scratch or undo.', true);
+  }, [nodes, tripId, persistNodes, pushHistory]);
 
   // Helper: Find all descendant IDs recursively
   const getDescendantIds = useCallback((targetId, nodeList) => {
@@ -396,12 +517,18 @@ export default function TripPlayground({ trip, initialNodes = null }) {
   const executeDelete = (targetNode) => {
     const descendantIds = new Set([targetNode.id, ...getDescendantIds(targetNode.id, nodes)]);
     const updated = nodes.filter((n) => !descendantIds.has(n.id));
+    const updatedLinks = links.filter(
+      (l) => !descendantIds.has(l.source) && !descendantIds.has(l.target)
+    );
 
     setNodes(updated);
+    setLinks(updatedLinks);
+    playgroundService.saveLinks(tripId, updatedLinks);
+
     if (selectedNodeId === targetNode.id) {
       setSelectedNodeId(updated[0]?.id || null);
     }
-    pushHistory(updated);
+    pushHistory(updated, updatedLinks);
     persistNodes(updated);
     showToast(`Deleted ${targetNode.title}`, true);
   };
@@ -515,6 +642,8 @@ export default function TripPlayground({ trip, initialNodes = null }) {
         canRedo={historyIndex < history.length - 1}
         onUndo={handleUndo}
         onRedo={handleRedo}
+        onClearCanvas={handleClearCanvas}
+        hasNodes={nodes.length > 0}
         leftPanelOpen={leftPanelOpen}
         onToggleLeftPanel={() => setLeftPanelOpen((prev) => !prev)}
         rightPanelOpen={rightPanelOpen}
@@ -560,6 +689,7 @@ export default function TripPlayground({ trip, initialNodes = null }) {
         ) : (
           <TripCanvas
             nodes={nodes}
+            links={links}
             selectedNodeId={selectedNodeId}
             onSelectNode={handleSelectNode}
             onUpdateNodeCoordinates={handleUpdateCoordinates}
@@ -575,6 +705,9 @@ export default function TripPlayground({ trip, initialNodes = null }) {
             onDeleteNode={handleDeleteRequest}
             onAddChildNode={handleAddChild}
             onAutoLayout={handleAutoLayout}
+            onCreateLink={handleCreateLink}
+            onDeleteLink={handleDeleteLink}
+            onClearCanvas={handleClearCanvas}
             isMiniMapOpen={isMiniMapOpen}
             onToggleMiniMap={() => setIsMiniMapOpen((prev) => !prev)}
           >
@@ -604,6 +737,9 @@ export default function TripPlayground({ trip, initialNodes = null }) {
               <NodeDetailsPanel
                 selectedNode={selectedNode}
                 allNodes={nodes}
+                links={links}
+                onCreateLink={handleCreateLink}
+                onDeleteLink={handleDeleteLink}
                 onClose={() => setSelectedNodeId(null)}
                 onUpdateNode={handleUpdateNode}
                 onOpenReplace={(node) => setReplaceTargetNode(node)}

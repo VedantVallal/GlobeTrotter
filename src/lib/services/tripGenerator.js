@@ -97,26 +97,8 @@ export function generateBlankManualTripPlan({
     };
   });
 
-  // Base city node for playground canvas
-  const nodes = [
-    {
-      id: `node-city-${tripId}`,
-      type: 'city',
-      parentId: null,
-      tripId,
-      title: chosenDest,
-      description: `Primary destination for your trip. Add activities and places to build your journey.`,
-      order: 0,
-      dayNumber: 1,
-      currency,
-      category: 'Sightseeing',
-      image: destInfo?.image || 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&fit=crop',
-      location: `${chosenDest}, ${destInfo?.country || 'India'}`,
-      coordinates: cityCoords,
-      x: 100,
-      y: 120,
-    },
-  ];
+  // Playground canvas starts clear and completely user-driven
+  const nodes = [];
 
   return {
     nodes,

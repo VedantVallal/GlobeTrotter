@@ -1,15 +1,15 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Plus, X, AlertCircle } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Plus, X, AlertCircle, Image as ImageIcon } from 'lucide-react';
 import Button from '@/components/ui/Button';
-import { CATEGORIES } from './playgroundTypes';
+import { CATEGORIES, STOCK_TRAVEL_IMAGES } from './playgroundTypes';
 import styles from './playground.module.css';
 
 export default function AddNodeDialog({
   isOpen,
   onClose,
-  nodes,
+  nodes = [],
   defaultParentId = null,
   defaultType = 'destination',
   onConfirmAdd,
@@ -22,20 +22,24 @@ export default function AddNodeDialog({
   const [estimatedCost, setEstimatedCost] = useState(0);
   const [category, setCategory] = useState('Sightseeing');
   const [notes, setNotes] = useState('');
+  const [selectedImage, setSelectedImage] = useState(STOCK_TRAVEL_IMAGES[0]?.url || '');
+  const [imageCategoryFilter, setImageCategoryFilter] = useState('All');
+  const [showImagePicker, setShowImagePicker] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
+
+  // Filtered stock images
+  const filteredStockImages = useMemo(() => {
+    if (imageCategoryFilter === 'All') return STOCK_TRAVEL_IMAGES;
+    return STOCK_TRAVEL_IMAGES.filter(
+      (img) => img.category.toLowerCase() === imageCategoryFilter.toLowerCase()
+    );
+  }, [imageCategoryFilter]);
 
   if (!isOpen) return null;
 
-  // Filter available parents based on nodeType:
-  // - City: parentId is null
-  // - Area: parent must be City
-  // - Destination: parent can be Area or City
-  // - Activity: parent can be Destination or Area
+  // Available parents if user wants to attach under an existing node
   const availableParents = nodes.filter((n) => {
     if (nodeType === 'city') return false;
-    if (nodeType === 'area') return n.type === 'city';
-    if (nodeType === 'destination') return n.type === 'area' || n.type === 'city';
-    if (nodeType === 'activity') return n.type === 'destination' || n.type === 'area';
     return true;
   });
 
@@ -46,20 +50,16 @@ export default function AddNodeDialog({
       return;
     }
 
-    if (nodeType !== 'city' && availableParents.length > 0 && !parentId) {
-      setErrorMsg(`Please select a parent ${nodeType === 'area' ? 'City' : 'Destination/Area'} for this stop.`);
-      return;
-    }
-
     onConfirmAdd({
       type: nodeType,
-      parentId: nodeType === 'city' ? null : (parentId || null),
+      parentId: parentId || null,
       title: title.trim(),
       dayNumber: Number(dayNumber) || 1,
       duration: duration.trim() || '2 hours',
       estimatedCost: Number(estimatedCost) || 0,
       category,
       notes: notes.trim(),
+      image: selectedImage || STOCK_TRAVEL_IMAGES[0]?.url,
     });
 
     onClose();
@@ -73,12 +73,12 @@ export default function AddNodeDialog({
       aria-modal="true"
       aria-labelledby="add-dialog-title"
     >
-      <div className={styles.modalBox} onClick={(e) => e.stopPropagation()} style={{ maxWidth: 500 }}>
+      <div className={styles.modalBox} onClick={(e) => e.stopPropagation()} style={{ maxWidth: 520 }}>
         {/* Header */}
         <div className={styles.modalHeader}>
           <div className={styles.modalHeaderTitle} id="add-dialog-title">
             <Plus size={18} color="var(--gt-blue)" />
-            <span>Add New Journey Stop</span>
+            <span>Add Journey Stop</span>
           </div>
           <button
             type="button"
@@ -111,16 +111,30 @@ export default function AddNodeDialog({
             </div>
           </div>
 
-          {/* Parent Selection (if not top-level City) */}
-          {nodeType !== 'city' && (
+          {/* Title */}
+          <div className={styles.formGroup}>
+            <label className={styles.formLabel}>Name / Title *</label>
+            <input
+              type="text"
+              placeholder="e.g. Sunset Point, Old Town Walking Tour..."
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className={styles.formInput}
+              autoFocus
+              required
+            />
+          </div>
+
+          {/* Parent Selection (Optional - user driven) */}
+          {availableParents.length > 0 && nodeType !== 'city' && (
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Attach Under (Parent)</label>
+              <label className={styles.formLabel}>Attach Under (Optional - can link later)</label>
               <select
                 className={styles.formSelect}
                 value={parentId}
                 onChange={(e) => setParentId(e.target.value)}
               >
-                <option value="">Select parent stop...</option>
+                <option value="">None (Independent stop — connect freely)</option>
                 {availableParents.map((parent) => (
                   <option key={parent.id} value={parent.id}>
                     [{parent.type.toUpperCase()}] {parent.title}
@@ -130,18 +144,85 @@ export default function AddNodeDialog({
             </div>
           )}
 
-          {/* Title */}
+          {/* Stock Image Selection */}
           <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Name / Title *</label>
-            <input
-              type="text"
-              placeholder="e.g. Anjuna Beach, Local Market..."
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className={styles.formInput}
-              autoFocus
-              required
-            />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+              <label className={styles.formLabel} style={{ marginBottom: 0 }}>Stock Travel Photo</label>
+              <button
+                type="button"
+                onClick={() => setShowImagePicker((prev) => !prev)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#2563eb',
+                  fontSize: 11,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 3,
+                }}
+              >
+                <ImageIcon size={12} />
+                <span>{showImagePicker ? 'Hide Gallery' : 'Browse Stock Photos'}</span>
+              </button>
+            </div>
+
+            {selectedImage && (
+              <div style={{
+                position: 'relative',
+                height: 80,
+                borderRadius: 8,
+                overflow: 'hidden',
+                border: '1px solid #e2e8f0',
+                marginBottom: 6,
+              }}>
+                <img src={selectedImage} alt="Selected stock" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <span style={{
+                  position: 'absolute',
+                  bottom: 4,
+                  right: 6,
+                  background: 'rgba(15, 23, 42, 0.75)',
+                  color: '#ffffff',
+                  fontSize: 10,
+                  padding: '1px 6px',
+                  borderRadius: 4,
+                }}>
+                  Selected Photo
+                </span>
+              </div>
+            )}
+
+            {showImagePicker && (
+              <div className={styles.stockImagePickerContainer} style={{ marginTop: 4 }}>
+                <div className={styles.stockImageCategoryTabs}>
+                  {['All', 'Beach', 'Heritage', 'Nature', 'Food', 'City', 'Adventure'].map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      className={`${styles.stockCategoryTab} ${imageCategoryFilter === cat ? styles.stockCategoryTabActive : ''}`}
+                      onClick={() => setImageCategoryFilter(cat)}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+
+                <div className={styles.stockImageGrid}>
+                  {filteredStockImages.map((img) => (
+                    <div
+                      key={img.id}
+                      className={`${styles.stockImageCard} ${selectedImage === img.url ? styles.stockImageCardActive : ''}`}
+                      onClick={() => setSelectedImage(img.url)}
+                      title={img.title}
+                    >
+                      <img src={img.thumbnail} alt={img.title} />
+                      <span className={styles.stockImageLabel}>{img.title}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Day & Duration Row */}

@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import {
   MapPin,
   Calendar,
@@ -14,6 +13,7 @@ import {
   Compass,
   Layers,
   Sparkles,
+  Link2,
 } from 'lucide-react';
 import styles from './playground.module.css';
 
@@ -53,6 +53,11 @@ export default function TripNodeCard({
   onDuplicate,
   onDelete,
   onAddChild,
+  isLinkingSource = false,
+  isLinkingCandidate = false,
+  isHoveredLinkTarget = false,
+  onStartLink,
+  onCompleteLink,
 }) {
   const config = TYPE_CONFIG[node.type] || TYPE_CONFIG.destination;
   const IconComponent = config.icon;
@@ -68,14 +73,18 @@ export default function TripNodeCard({
   return (
     <div
       id={`node-${node.id}`}
-      className={`${styles.nodeCard} ${isSelected ? styles.nodeCardSelected : ''} ${styles[`nodeType_${node.type}`]}`}
+      className={`${styles.nodeCard} ${isSelected ? styles.nodeCardSelected : ''} ${styles[`nodeType_${node.type}`]} ${isLinkingSource ? styles.nodeCardLinkingSource : ''} ${isLinkingCandidate ? styles.nodeCardLinkingCandidate : ''} ${isHoveredLinkTarget ? styles.nodeCardLinkingHovered : ''}`}
       style={{
         left: `${node.x}px`,
         top: `${node.y}px`,
       }}
       onClick={(e) => {
         e.stopPropagation();
-        onSelect(node.id);
+        if (isLinkingCandidate && onCompleteLink) {
+          onCompleteLink(node.id);
+        } else {
+          onSelect(node.id);
+        }
       }}
       onMouseDown={handleMouseDown}
       role="button"
@@ -83,7 +92,11 @@ export default function TripNodeCard({
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          onSelect(node.id);
+          if (isLinkingCandidate && onCompleteLink) {
+            onCompleteLink(node.id);
+          } else {
+            onSelect(node.id);
+          }
         }
       }}
       aria-selected={isSelected}
@@ -103,7 +116,15 @@ export default function TripNodeCard({
         </div>
 
         <div className={styles.nodeHeaderRight}>
-          {node.dayNumber && (
+          {isLinkingSource && (
+            <span className={styles.nodeLinkSourceTag}>Linking</span>
+          )}
+
+          {isLinkingCandidate && (
+            <span className={styles.nodeLinkTargetTag}>Connect</span>
+          )}
+
+          {node.dayNumber && !isLinkingSource && !isLinkingCandidate && (
             <span className={styles.nodeDayBadge}>
               <Calendar size={10} style={{ marginRight: 2 }} />
               Day {node.dayNumber}
@@ -112,6 +133,17 @@ export default function TripNodeCard({
 
           {/* Quick Context Action Icons */}
           <div className={styles.nodeQuickActions}>
+            <button
+              type="button"
+              className={styles.nodeActionBtn}
+              onClick={(e) => {
+                e.stopPropagation();
+                onStartLink?.(node.id);
+              }}
+              title={`Connect ${node.title} to another stop`}
+            >
+              <Link2 size={11} />
+            </button>
             <button
               type="button"
               className={styles.nodeActionBtn}
@@ -216,8 +248,24 @@ export default function TripNodeCard({
       </div>
 
       {/* Active Connect Points Anchor */}
-      <div className={`${styles.nodePort} ${styles.nodePortIn}`} title="Parent Input" />
-      <div className={`${styles.nodePort} ${styles.nodePortOut}`} title="Children Output" />
+      <div
+        className={`${styles.nodePort} ${styles.nodePortIn} ${styles.nodePortInteractive} ${styles.nodePortInInteractive}`}
+        title="Input: Connect into this stop"
+        onClick={(e) => {
+          e.stopPropagation();
+          if (isLinkingCandidate && onCompleteLink) {
+            onCompleteLink(node.id);
+          }
+        }}
+      />
+      <div
+        className={`${styles.nodePort} ${styles.nodePortOut} ${styles.nodePortInteractive} ${styles.nodePortOutInteractive}`}
+        title="Output: Click to link this stop to another"
+        onClick={(e) => {
+          e.stopPropagation();
+          onStartLink?.(node.id);
+        }}
+      />
     </div>
   );
 }

@@ -143,9 +143,10 @@ export default function CreateTripPage() {
         travelers: Number(travelers) || 2,
       });
 
-      // 3. Persist Itinerary and Nodes
+      // 3. Persist Itinerary and Nodes (Playground starts clear & user-driven)
       await Promise.all([
-        playgroundService.saveNodes(newTrip.id, plan.nodes),
+        playgroundService.saveNodes(newTrip.id, []),
+        playgroundService.saveLinks(newTrip.id, []),
         itineraryService.saveItinerary(newTrip.id, plan.itineraryDays),
       ]);
 

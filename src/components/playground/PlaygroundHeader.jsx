@@ -21,6 +21,7 @@ import {
   Map,
   Users,
   UserPlus,
+  Trash2,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { formatCurrency, formatDateRange } from '@/lib/utils/formatters';
@@ -43,6 +44,8 @@ export default function PlaygroundHeader({
   onOpenShare,
   viewMode = 'canvas',
   onToggleViewMode,
+  onClearCanvas,
+  hasNodes = false,
 }) {
   return (
     <header className={styles.header}>
@@ -157,6 +160,18 @@ export default function PlaygroundHeader({
           >
             <Redo2 size={14} />
           </button>
+          {hasNodes && onClearCanvas && (
+            <button
+              type="button"
+              className={styles.headerIconBtn}
+              onClick={onClearCanvas}
+              title="Clear Canvas (Reset to blank workspace)"
+              aria-label="Clear Canvas"
+              style={{ color: '#ef4444' }}
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
         </div>
 
         {/* Side Panel Toggle Buttons */}
